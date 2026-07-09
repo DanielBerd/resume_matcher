@@ -44,7 +44,7 @@ sample job postings and resumes in `examples/`:
 python -m resume_matcher --test-mode
 ```
 
-The examples include four job postings (one as a saved `.eml` email) and five
+The examples include five job postings (one as a saved `.eml` email) and five
 resumes in PDF/DOCX format with deliberately varied fit — a strong match for
 each job, a generalist, and a marketing resume that should score low across
 the board — so you can eyeball whether the model's rankings make sense.

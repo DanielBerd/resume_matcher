@@ -1,0 +1,24 @@
+Embedded Software Engineer (C++) — Vektor Drive Systems
+
+Vektor Drive Systems builds motor controllers for industrial robotics. We are
+looking for an Embedded Software Engineer to work on the firmware that runs
+our real-time control loops.
+
+Responsibilities:
+- Develop and maintain firmware in modern C++ (C++17) for ARM Cortex-M MCUs
+- Implement and tune hard real-time control loops (current/velocity/position)
+- Work with an RTOS (FreeRTOS or Zephyr) and bare-metal components
+- Bring up new boards together with the hardware team (schematics, datasheets)
+- Debug with oscilloscopes, logic analyzers, and JTAG/SWD tools
+
+Requirements:
+- 4+ years of professional C or C++ development for embedded targets
+- Solid understanding of real-time constraints, interrupts, and DMA
+- Experience with communication buses (CAN, SPI, I2C, UART)
+- Comfortable reading schematics and using lab equipment
+- Familiarity with unit testing and CI for embedded code
+
+Nice to have:
+- Motor control or power electronics background (FOC, PWM inverters)
+- Functional safety exposure (IEC 61508, ISO 26262)
+- Rust interest, MISRA C++ experience, or Yocto-based Linux work
