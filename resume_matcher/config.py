@@ -16,7 +16,7 @@ class Config:
     # LM Studio ignores the API key but the OpenAI client requires one.
     llm_api_key: str = os.environ.get("LMSTUDIO_API_KEY", "lm-studio")
     # Model identifier as loaded in LM Studio.
-    llm_model: str = os.environ.get("LMSTUDIO_MODEL", "google/gemma-4-26b-a4b-qat")
+    llm_model: str = os.environ.get("LMSTUDIO_MODEL", "google/gemma-4-12b-qat")
     llm_temperature: float = 0.1
     # Generous budget: reasoning-tuned models emit thinking tokens before the
     # answer, and those count against this limit.

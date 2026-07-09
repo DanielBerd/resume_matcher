@@ -2,7 +2,7 @@
 
 Scaffolding for a local, private resume-to-job matcher. It scores every resume in a
 folder against each job posting using a local Gemma model
-(`google/gemma-4-26b-a4b-qat`) served by [LM Studio](https://lmstudio.ai/), then
+(`google/gemma-4-12b-qat`) served by [LM Studio](https://lmstudio.ai/), then
 reports the top 5 matches per job.
 
 ## Workflow
@@ -24,7 +24,7 @@ pip install -r requirements.txt
 
 Then in LM Studio:
 
-1. Download and load `google/gemma-4-26b-a4b-qat`.
+1. Download and load `google/gemma-4-12b-qat`.
 2. Start the local server (default `http://localhost:1234/v1`).
 
 Note: `.doc` (legacy Word) files additionally need `antiword` or LibreOffice
