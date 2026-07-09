@@ -22,8 +22,17 @@ class Config:
     # answer, and those count against this limit.
     llm_max_tokens: int = 2048
 
+    # Per-request timeout in seconds. Scoring calls are quick; transcription
+    # of image resumes can take minutes on partial GPU offload.
+    llm_timeout: float = 300.0
+
     # Print raw model replies and finish reasons for each scoring call.
     verbose: bool = False
+
+    # Transcribe image-based resumes (scanned PDFs, .png/.jpg) with the
+    # model's vision input. Off by default: on CPU-heavy setups a single page
+    # can take many minutes. When off, such resumes are skipped with a note.
+    ocr: bool = False
 
     # --- Input locations ---
     # Folder containing resumes (.pdf, .doc, .docx).

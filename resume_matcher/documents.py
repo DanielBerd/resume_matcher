@@ -51,7 +51,7 @@ def load_resumes(resumes_dir: Path) -> list[Resume]:
     return resumes
 
 
-def pdf_page_images(path: Path, dpi: int = 150, max_pages: int = 4) -> list[bytes]:
+def pdf_page_images(path: Path, dpi: int = 100, max_pages: int = 4) -> list[bytes]:
     """Render the first pages of a PDF as PNG images for vision transcription."""
     import fitz  # pymupdf
 

@@ -23,7 +23,11 @@ TRANSCRIBE_PROMPT = (
 class LocalLLM:
     def __init__(self, config: Config):
         self.config = config
-        self.client = OpenAI(base_url=config.llm_base_url, api_key=config.llm_api_key)
+        self.client = OpenAI(
+            base_url=config.llm_base_url,
+            api_key=config.llm_api_key,
+            timeout=config.llm_timeout,
+        )
 
     def complete(self, system_prompt: str, user_prompt: str) -> str:
         """Send a single chat completion request and return the text reply."""

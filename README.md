@@ -53,10 +53,12 @@ While running, each scoring line shows overall progress across all
 job × resume pairs. Results are printed and also saved as text + JSON under
 `results/` (gitignored, one timestamped pair per run).
 
-Scanned PDFs with no text layer, and plain image files (.png/.jpg/.webp), are
-handled by first asking the model to transcribe the resume image (one request
-per page), then scoring the transcription in a fresh call — this requires the
-loaded model to support vision input.
+Scanned PDFs with no text layer, and plain image files (.png/.jpg/.webp), can
+be handled by first asking the model to transcribe the resume image (one
+request per page), then scoring the transcription in a fresh call. This
+requires a vision-capable model and is slow on partial GPU offload (the model
+must generate the whole resume as output), so it is opt-in via `--ocr`;
+without the flag, image-based resumes are skipped with a note.
 
 Options: `--top N` (default 5), `--model NAME`, `--base-url URL`. Environment
 variables `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL` are also honored (see

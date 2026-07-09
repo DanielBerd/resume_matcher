@@ -25,7 +25,7 @@ class Progress:
         return f"[{self.done}/{self.total} total, {percent}%]"
 
 
-def transcribe_resumes(llm: LocalLLM, resumes: list[Resume]) -> list[Resume]:
+def transcribe_resumes(llm: LocalLLM, resumes: list[Resume], enabled: bool) -> list[Resume]:
     """OCR resumes that have no text layer using the model's vision input.
 
     Each page image is transcribed in its own request; the resulting text is
@@ -37,7 +37,10 @@ def transcribe_resumes(llm: LocalLLM, resumes: list[Resume]) -> list[Resume]:
         if not resume.needs_ocr:
             usable.append(resume)
             continue
-        print(f"Transcribing image-based resume {resume.name} ...")
+        if not enabled:
+            print(f"[note] {resume.name} is image-based; skipping (rerun with --ocr to transcribe it).")
+            continue
+        print(f"Transcribing image-based resume {resume.name} (this can take minutes) ...")
         try:
             if resume.path.suffix.lower() == ".pdf":
                 pages = [llm.transcribe_image(image) for image in pdf_page_images(resume.path)]
@@ -76,7 +79,7 @@ def match_job(
 def run(config: Config, jobs: list[JobPosting], resumes: list[Resume]) -> dict[str, list[MatchResult]]:
     """Run the full matching pipeline. Returns {job source: top-N results}."""
     llm = LocalLLM(config)
-    resumes = transcribe_resumes(llm, resumes)
+    resumes = transcribe_resumes(llm, resumes, enabled=config.ocr)
     progress = Progress(total=len(jobs) * len(resumes))
     top_matches: dict[str, list[MatchResult]] = {}
     for job in jobs:

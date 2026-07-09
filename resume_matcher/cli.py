@@ -34,6 +34,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", default=None, help="Model name as loaded in LM Studio")
     parser.add_argument("--base-url", default=None, help="LM Studio server URL (default http://localhost:1234/v1)")
     parser.add_argument(
+        "--ocr",
+        action="store_true",
+        help="Transcribe image-based resumes (scanned PDFs, images) with the model's "
+        "vision input before scoring; slow on CPU-heavy setups, so off by default",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Print the raw model reply and finish reason for every scoring call",
@@ -56,6 +62,8 @@ def main(argv: list[str] | None = None) -> int:
         config.llm_model = args.model
     if args.base_url:
         config.llm_base_url = args.base_url
+    if args.ocr:
+        config.ocr = True
     if args.verbose:
         config.verbose = True
 
