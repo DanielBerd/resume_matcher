@@ -33,6 +33,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--top", type=int, default=None, help="Number of top matches to report (default 5)")
     parser.add_argument("--model", default=None, help="Model name as loaded in LM Studio")
     parser.add_argument("--base-url", default=None, help="LM Studio server URL (default http://localhost:1234/v1)")
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print the raw model reply and finish reason for every scoring call",
+    )
     args = parser.parse_args(argv)
 
     config = Config()
@@ -51,6 +56,8 @@ def main(argv: list[str] | None = None) -> int:
         config.llm_model = args.model
     if args.base_url:
         config.llm_base_url = args.base_url
+    if args.verbose:
+        config.verbose = True
 
     if not config.jobs_dir.is_dir():
         print(f"error: jobs folder not found: {config.jobs_dir}", file=sys.stderr)

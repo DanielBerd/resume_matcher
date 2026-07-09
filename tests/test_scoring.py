@@ -26,6 +26,22 @@ def test_clamps_out_of_range_scores():
     assert score == 100
 
 
+def test_ignores_numbers_inside_think_blocks():
+    reply = (
+        "<think>The job needs 5 years experience and the resume shows 3, "
+        "so maybe 40?</think>\n"
+        '{"score": 55, "comment": "Partial experience match."}'
+    )
+    score, comment = parse_reply(reply)
+    assert score == 55
+    assert comment == "Partial experience match."
+
+
+def test_handles_unclosed_think_block():
+    score, _ = parse_reply("<think>Let me weigh the requirements: 5 years")
+    assert score == 0
+
+
 def test_unparseable_reply_scores_zero():
     score, comment = parse_reply("I cannot evaluate this.")
     assert score == 0

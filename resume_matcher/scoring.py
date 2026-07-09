@@ -58,6 +58,10 @@ def parse_reply(reply: str) -> tuple[int, str]:
     Prefers the requested JSON format, but falls back to grabbing the first
     number in the reply since local models don't always follow instructions.
     """
+    # Drop thinking blocks emitted by reasoning-tuned models before parsing,
+    # so a number inside the reasoning isn't mistaken for the score.
+    reply = re.sub(r"<think(?:ing)?>.*?(?:</think(?:ing)?>|$)", "", reply, flags=re.DOTALL)
+
     match = re.search(r"\{.*\}", reply, re.DOTALL)
     if match:
         try:

@@ -18,7 +18,12 @@ class Config:
     # Model identifier as loaded in LM Studio.
     llm_model: str = os.environ.get("LMSTUDIO_MODEL", "google/gemma-4-26b-a4b-qat")
     llm_temperature: float = 0.1
-    llm_max_tokens: int = 200
+    # Generous budget: reasoning-tuned models emit thinking tokens before the
+    # answer, and those count against this limit.
+    llm_max_tokens: int = 2048
+
+    # Print raw model replies and finish reasons for each scoring call.
+    verbose: bool = False
 
     # --- Input locations ---
     # Folder containing resumes (.pdf, .doc, .docx).
