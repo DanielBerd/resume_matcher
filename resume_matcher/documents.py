@@ -24,10 +24,19 @@ class Resume:
     # True when no text layer exists (scanned PDF or plain image); such
     # resumes are transcribed with the model's vision input before scoring.
     needs_ocr: bool = False
+    # The candidate's full name, filled in from the model's scoring reply.
+    candidate_name: str = ""
 
     @property
     def name(self) -> str:
         return self.path.name
+
+    @property
+    def display_name(self) -> str:
+        """Candidate name with the filename, e.g. 'Jane Doe (cv.pdf)'."""
+        if self.candidate_name:
+            return f"{self.candidate_name} ({self.name})"
+        return self.name
 
 
 def load_resumes(resumes_dir: Path) -> list[Resume]:

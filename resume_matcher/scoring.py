@@ -22,7 +22,8 @@ SYSTEM_PROMPT = (
     "candidate resume. Rate how well the resume matches the job on a scale of "
     "0 to 100, where 0 is no match at all and 100 is a perfect match. "
     "Respond with ONLY a JSON object of the form: "
-    '{"score": <integer 0-100>, "comment": "<one short sentence>"}'
+    '{"score": <integer 0-100>, "name": "<the candidate\'s full name from the '
+    'resume, or empty string if not stated>", "comment": "<one short sentence>"}'
 )
 
 USER_PROMPT_TEMPLATE = """JOB POSTING:
@@ -48,12 +49,16 @@ def score_resume(llm: "LocalLLM", job: JobPosting, resume: Resume) -> MatchResul
     """Ask the local model to score one resume against one job posting."""
     prompt = USER_PROMPT_TEMPLATE.format(job=job.body, resume=resume.text)
     reply = llm.complete(SYSTEM_PROMPT, prompt)
-    score, comment = parse_reply(reply)
+    score, comment, name = parse_reply(reply)
+    # The candidate's name is a property of the resume, not of one match;
+    # keep the first one the model reports.
+    if name and not resume.candidate_name:
+        resume.candidate_name = name
     return MatchResult(job=job, resume=resume, score=score, comment=comment)
 
 
-def parse_reply(reply: str) -> tuple[int, str]:
-    """Parse the model's reply into (score, comment).
+def parse_reply(reply: str) -> tuple[int, str, str]:
+    """Parse the model's reply into (score, comment, candidate name).
 
     Prefers the requested JSON format, but falls back to grabbing the first
     number in the reply since local models don't always follow instructions.
@@ -68,15 +73,16 @@ def parse_reply(reply: str) -> tuple[int, str]:
             data = json.loads(match.group(0))
             score = int(data.get("score", 0))
             comment = str(data.get("comment", "")).strip()
-            return _clamp(score), comment
+            name = str(data.get("name", "")).strip()
+            return _clamp(score), comment, name
         except (json.JSONDecodeError, TypeError, ValueError):
             pass
 
     number = re.search(r"\b(\d{1,3})\b", reply)
     if number:
-        return _clamp(int(number.group(1))), reply.strip()[:200]
+        return _clamp(int(number.group(1))), reply.strip()[:200], ""
 
-    return 0, f"Unparseable reply: {reply.strip()[:200]}"
+    return 0, f"Unparseable reply: {reply.strip()[:200]}", ""
 
 
 def _clamp(score: int) -> int:
