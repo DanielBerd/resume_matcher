@@ -35,6 +35,10 @@ class Config:
     # --- Matching ---
     top_n: int = 5
 
+    # --- Output ---
+    # Run results (text + JSON) are written here; the folder is gitignored.
+    results_dir: Path = field(default_factory=lambda: Path("results"))
+
     # --- Email ingestion (stub — see email_ingest.py) ---
     imap_host: str = os.environ.get("RM_IMAP_HOST", "")
     imap_user: str = os.environ.get("RM_IMAP_USER", "")

@@ -6,9 +6,18 @@ so we use the openai client pointed at the local server.
 
 from __future__ import annotations
 
+import base64
+import mimetypes
+
 from openai import OpenAI
 
 from .config import Config
+
+TRANSCRIBE_PROMPT = (
+    "Transcribe all text in this resume image to plain text. Preserve the "
+    "reading order and section structure. Output only the transcribed text, "
+    "with no commentary."
+)
 
 
 class LocalLLM:
@@ -45,6 +54,34 @@ class LocalLLM:
                 "reasoning before answering - raise llm_max_tokens in config.py."
             )
         return content
+
+    def transcribe_image(self, image: bytes, mime_type: str = "image/png") -> str:
+        """Transcribe one resume page image to text using the model's vision input.
+
+        Each page is its own stateless request, and the returned text is later
+        sent to a fresh scoring call - the image never shares context with
+        other resumes.
+        """
+        data_url = f"data:{mime_type};base64,{base64.b64encode(image).decode()}"
+        response = self.client.chat.completions.create(
+            model=self.config.llm_model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": TRANSCRIBE_PROMPT},
+                        {"type": "image_url", "image_url": {"url": data_url}},
+                    ],
+                }
+            ],
+            temperature=0.0,
+            max_tokens=self.config.llm_max_tokens,
+        )
+        return response.choices[0].message.content or ""
+
+
+def guess_mime_type(filename: str) -> str:
+    return mimetypes.guess_type(filename)[0] or "image/png"
 
 
 def _reasoning_content(message) -> str | None:

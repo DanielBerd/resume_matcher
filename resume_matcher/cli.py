@@ -14,7 +14,7 @@ from .config import Config
 from .documents import load_resumes
 from .email_ingest import load_jobs_from_folder
 from .matcher import run
-from .report import print_report
+from .report import print_report, write_report
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -81,6 +81,8 @@ def main(argv: list[str] | None = None) -> int:
 
     top_matches = run(config, jobs, resumes)
     print_report(top_matches)
+    saved = write_report(top_matches, config.results_dir)
+    print(f"\nResults saved to {saved} (and .json alongside)")
     return 0
 
 

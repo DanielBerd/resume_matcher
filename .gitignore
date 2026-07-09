@@ -7,3 +7,5 @@ resumes/*
 !resumes/.gitkeep
 jobs/*
 !jobs/.gitkeep
+# Run results stay local
+results/

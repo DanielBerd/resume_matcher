@@ -49,6 +49,15 @@ resumes in PDF/DOCX format with deliberately varied fit — a strong match for
 each job, a generalist, and a marketing resume that should score low across
 the board — so you can eyeball whether the model's rankings make sense.
 
+While running, each scoring line shows overall progress across all
+job × resume pairs. Results are printed and also saved as text + JSON under
+`results/` (gitignored, one timestamped pair per run).
+
+Scanned PDFs with no text layer, and plain image files (.png/.jpg/.webp), are
+handled by first asking the model to transcribe the resume image (one request
+per page), then scoring the transcription in a fresh call — this requires the
+loaded model to support vision input.
+
 Options: `--top N` (default 5), `--model NAME`, `--base-url URL`. Environment
 variables `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL` are also honored (see
 `resume_matcher/config.py`).
