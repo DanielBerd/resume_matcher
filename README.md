@@ -64,6 +64,10 @@ vision-capable model. Either way the extracted text is scored in a fresh
 call, like any other resume; with neither option available, image-based
 resumes are skipped with a note.
 
+Before matching starts, the tool queries LM Studio for the loaded models and
+asks you to pick one (auto-selected when only one is loaded, or when running
+non-interactively). Pass `--model NAME` to skip the picker.
+
 Options: `--top N` (default 5), `--model NAME`, `--base-url URL`. Environment
 variables `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL` are also honored (see
 `resume_matcher/config.py`).

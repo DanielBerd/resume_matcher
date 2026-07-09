@@ -14,7 +14,50 @@ from .config import Config
 from .documents import load_resumes
 from .email_ingest import load_jobs_from_folder
 from .matcher import run
+from .llm_client import list_models
 from .report import print_report, write_report
+
+
+def choose_model(config: Config) -> bool:
+    """Query LM Studio for available models and let the user pick one.
+
+    Returns False when the server is unreachable or has no models loaded.
+    """
+    try:
+        models = list_models(config)
+    except Exception as exc:
+        print(f"error: cannot reach LM Studio at {config.llm_base_url}: {exc}", file=sys.stderr)
+        print("Is the server running? (LM Studio > Developer > Start Server)", file=sys.stderr)
+        return False
+    if not models:
+        print("error: LM Studio reports no models. Load a model first.", file=sys.stderr)
+        return False
+
+    if len(models) == 1:
+        config.llm_model = models[0]
+        print(f"Using the only available model: {models[0]}")
+        return True
+
+    default = config.llm_model if config.llm_model in models else models[0]
+    if not sys.stdin.isatty():
+        # Non-interactive run (piped/CI): don't block on input.
+        config.llm_model = default
+        print(f"Non-interactive session; using model: {default}")
+        return True
+
+    print("Available models in LM Studio:")
+    for i, model in enumerate(models, start=1):
+        marker = " (default)" if model == default else ""
+        print(f"  {i}. {model}{marker}")
+    while True:
+        answer = input(f"Pick a model [1-{len(models)}, Enter for default]: ").strip()
+        if not answer:
+            config.llm_model = default
+            return True
+        if answer.isdigit() and 1 <= int(answer) <= len(models):
+            config.llm_model = models[int(answer) - 1]
+            return True
+        print("Invalid choice, try again.")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -31,7 +74,9 @@ def main(argv: list[str] | None = None) -> int:
         "instead of the real input folders",
     )
     parser.add_argument("--top", type=int, default=None, help="Number of top matches to report (default 5)")
-    parser.add_argument("--model", default=None, help="Model name as loaded in LM Studio")
+    parser.add_argument(
+        "--model", default=None, help="Model name as loaded in LM Studio (skips the model picker)"
+    )
     parser.add_argument("--base-url", default=None, help="LM Studio server URL (default http://localhost:1234/v1)")
     parser.add_argument(
         "--ocr",
@@ -85,6 +130,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(f"Loaded {len(jobs)} job posting(s) and {len(resumes)} resume(s).")
+
+    # --model pins the choice; otherwise ask the server what's loaded and let
+    # the user pick before matching starts.
+    if not args.model and not choose_model(config):
+        return 1
     print(f"Model: {config.llm_model} @ {config.llm_base_url}")
 
     top_matches = run(config, jobs, resumes)

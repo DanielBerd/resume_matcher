@@ -88,6 +88,12 @@ def guess_mime_type(filename: str) -> str:
     return mimetypes.guess_type(filename)[0] or "image/png"
 
 
+def list_models(config: Config) -> list[str]:
+    """Return the model ids available on the LM Studio server."""
+    client = OpenAI(base_url=config.llm_base_url, api_key=config.llm_api_key, timeout=10)
+    return [model.id for model in client.models.list()]
+
+
 def _reasoning_content(message) -> str | None:
     """Pull reasoning text out of non-standard response fields, if present."""
     value = getattr(message, "reasoning_content", None)
