@@ -4,35 +4,25 @@ from resume_matcher.scoring import parse_reply
 
 
 def test_parses_clean_json():
-    score, comment, name = parse_reply(
-        '{"score": 85, "name": "Jane Doe", "comment": "Strong match on Python skills."}'
-    )
+    score, comment = parse_reply('{"score": 85, "comment": "Strong match on Python skills."}')
     assert score == 85
     assert comment == "Strong match on Python skills."
-    assert name == "Jane Doe"
-
-
-def test_missing_name_defaults_to_empty():
-    score, _, name = parse_reply('{"score": 60, "comment": "Decent overlap."}')
-    assert score == 60
-    assert name == ""
 
 
 def test_parses_json_with_surrounding_text():
     reply = 'Sure! Here is my rating:\n{"score": 42, "comment": "Partial overlap."}\nHope that helps.'
-    score, comment, _ = parse_reply(reply)
+    score, comment = parse_reply(reply)
     assert score == 42
     assert comment == "Partial overlap."
 
 
 def test_falls_back_to_first_number():
-    score, _, name = parse_reply("I would rate this resume 73 out of 100.")
+    score, _ = parse_reply("I would rate this resume 73 out of 100.")
     assert score == 73
-    assert name == ""
 
 
 def test_clamps_out_of_range_scores():
-    score, _, _ = parse_reply('{"score": 150, "comment": "too enthusiastic"}')
+    score, _ = parse_reply('{"score": 150, "comment": "too enthusiastic"}')
     assert score == 100
 
 
@@ -42,17 +32,17 @@ def test_ignores_numbers_inside_think_blocks():
         "so maybe 40?</think>\n"
         '{"score": 55, "comment": "Partial experience match."}'
     )
-    score, comment, _ = parse_reply(reply)
+    score, comment = parse_reply(reply)
     assert score == 55
     assert comment == "Partial experience match."
 
 
 def test_handles_unclosed_think_block():
-    score, _, _ = parse_reply("<think>Let me weigh the requirements: 5 years")
+    score, _ = parse_reply("<think>Let me weigh the requirements: 5 years")
     assert score == 0
 
 
 def test_unparseable_reply_scores_zero():
-    score, comment, _ = parse_reply("I cannot evaluate this.")
+    score, comment = parse_reply("I cannot evaluate this.")
     assert score == 0
     assert "Unparseable" in comment or comment

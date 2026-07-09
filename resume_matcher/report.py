@@ -19,7 +19,7 @@ def format_report(top_matches: dict[str, list[MatchResult]]) -> str:
         job_title = results[0].job.title
         lines.append(f"\n=== Top {len(results)} matches for: {job_title} ({job_source}) ===")
         for rank, result in enumerate(results, start=1):
-            lines.append(f"{rank}. {result.resume.display_name} - score {result.score}/100")
+            lines.append(f"{rank}. {result.resume.name} - score {result.score}/100")
             if result.comment:
                 lines.append(f"   {result.comment}")
     return "\n".join(lines)
@@ -44,12 +44,7 @@ def write_report(top_matches: dict[str, list[MatchResult]], results_dir: Path) -
             "job_source": job_source,
             "job_title": results[0].job.title if results else None,
             "matches": [
-                {
-                    "resume": r.resume.name,
-                    "candidate": r.resume.candidate_name or None,
-                    "score": r.score,
-                    "comment": r.comment,
-                }
+                {"resume": r.resume.name, "score": r.score, "comment": r.comment}
                 for r in results
             ],
         }
