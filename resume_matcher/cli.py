@@ -24,12 +24,23 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--jobs", type=Path, default=None, help="Folder with job postings (.txt/.eml)")
     parser.add_argument("--resumes", type=Path, default=None, help="Folder with resumes (.pdf/.doc/.docx)")
+    parser.add_argument(
+        "--test-mode",
+        action="store_true",
+        help="Use the bundled example jobs and resumes (examples/jobs, examples/resumes) "
+        "instead of the real input folders",
+    )
     parser.add_argument("--top", type=int, default=None, help="Number of top matches to report (default 5)")
     parser.add_argument("--model", default=None, help="Model name as loaded in LM Studio")
     parser.add_argument("--base-url", default=None, help="LM Studio server URL (default http://localhost:1234/v1)")
     args = parser.parse_args(argv)
 
     config = Config()
+    if args.test_mode:
+        # Bundled sample data, resolved relative to the repo so this works from any cwd.
+        examples_dir = Path(__file__).resolve().parent.parent / "examples"
+        config.jobs_dir = examples_dir / "jobs"
+        config.resumes_dir = examples_dir / "resumes"
     if args.jobs:
         config.jobs_dir = args.jobs
     if args.resumes:

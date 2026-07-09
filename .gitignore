@@ -2,8 +2,8 @@ __pycache__/
 *.pyc
 .venv/
 .pytest_cache/
-# Keep real resumes and job emails out of git (only the example is tracked)
+# Keep real resumes and job emails out of git (bundled samples live in examples/)
 resumes/*
 !resumes/.gitkeep
 jobs/*
-!jobs/example_job_posting.txt
+!jobs/.gitkeep

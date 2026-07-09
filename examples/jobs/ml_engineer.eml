@@ -1,0 +1,30 @@
+From: recruiting@helixbio.example.com
+To: candidates@example.com
+Subject: Job Opening: Machine Learning Engineer at Helix Biotech
+Date: Tue, 07 Jul 2026 09:15:00 +0000
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+
+Hi,
+
+We are excited to share a new opening on our computational biology team.
+
+Machine Learning Engineer — Helix Biotech
+
+About the role:
+You will train and deploy models that predict protein-ligand binding
+affinity, working alongside wet-lab scientists.
+
+Requirements:
+- MSc or PhD in Computer Science, Bioinformatics, or related field
+- Strong Python and PyTorch experience
+- Experience taking ML models to production (MLOps, model serving)
+- Solid grounding in statistics and experiment design
+
+Nice to have:
+- Experience with protein structure data or cheminformatics (RDKit)
+- Distributed training experience
+- Publications in ML or computational biology venues
+
+Best regards,
+Helix Biotech Recruiting

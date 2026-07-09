@@ -36,6 +36,19 @@ installed; `.pdf` and `.docx` work out of the box.
 python -m resume_matcher --jobs jobs/ --resumes resumes/
 ```
 
+By default the tool reads real inputs from `jobs/` and `resumes/`. To try the
+pipeline without any real data, run in test mode, which uses the bundled
+sample job postings and resumes in `examples/`:
+
+```bash
+python -m resume_matcher --test-mode
+```
+
+The examples include four job postings (one as a saved `.eml` email) and five
+resumes in PDF/DOCX format with deliberately varied fit — a strong match for
+each job, a generalist, and a marketing resume that should score low across
+the board — so you can eyeball whether the model's rankings make sense.
+
 Options: `--top N` (default 5), `--model NAME`, `--base-url URL`. Environment
 variables `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL` are also honored (see
 `resume_matcher/config.py`).
