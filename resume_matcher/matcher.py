@@ -6,7 +6,7 @@ Step 4 of the workflow: collect ratings per job, then report the top 5.
 from __future__ import annotations
 
 from .config import Config
-from .documents import Resume, pdf_page_images
+from .documents import Resume, ocr_with_tesseract, pdf_page_images, tesseract_available
 from .email_ingest import JobPosting
 from .llm_client import LocalLLM, guess_mime_type
 from .scoring import MatchResult, score_resume
@@ -25,35 +25,45 @@ class Progress:
         return f"[{self.done}/{self.total} total, {percent}%]"
 
 
-def transcribe_resumes(llm: LocalLLM, resumes: list[Resume], enabled: bool) -> list[Resume]:
-    """OCR resumes that have no text layer using the model's vision input.
+def transcribe_resumes(llm: LocalLLM, resumes: list[Resume], vision_fallback: bool) -> list[Resume]:
+    """Extract text from image-based resumes (scanned PDFs, image files).
 
-    Each page image is transcribed in its own request; the resulting text is
-    then used for scoring like any other resume. Resumes that still have no
-    text afterwards are dropped.
+    Tesseract OCR is the first choice: it is local and takes seconds. The
+    model's vision input is the fallback (behind --ocr) since transcribing a
+    page can take minutes on partial GPU offload. Either way the resulting
+    text is scored in a fresh call like any other resume; resumes that still
+    have no text afterwards are dropped.
     """
     usable: list[Resume] = []
+    use_tesseract = any(r.needs_ocr for r in resumes) and tesseract_available()
     for resume in resumes:
         if not resume.needs_ocr:
             usable.append(resume)
             continue
-        if not enabled:
-            print(f"[note] {resume.name} is image-based; skipping (rerun with --ocr to transcribe it).")
-            continue
-        print(f"Transcribing image-based resume {resume.name} (this can take minutes) ...")
-        try:
-            if resume.path.suffix.lower() == ".pdf":
-                pages = [llm.transcribe_image(image) for image in pdf_page_images(resume.path)]
-            else:
-                mime = guess_mime_type(resume.name)
-                pages = [llm.transcribe_image(resume.path.read_bytes(), mime_type=mime)]
-            resume.text = "\n".join(pages)
-        except Exception as exc:
-            print(f"[warn] transcription of {resume.name} failed: {exc}")
+        if use_tesseract:
+            print(f"OCR-ing image-based resume {resume.name} with Tesseract ...")
+            try:
+                resume.text = ocr_with_tesseract(resume.path)
+            except Exception as exc:
+                print(f"[warn] Tesseract OCR of {resume.name} failed: {exc}")
+        if not resume.text.strip() and vision_fallback:
+            print(f"Transcribing {resume.name} with the model's vision input (this can take minutes) ...")
+            try:
+                if resume.path.suffix.lower() == ".pdf":
+                    pages = [llm.transcribe_image(image) for image in pdf_page_images(resume.path)]
+                else:
+                    mime = guess_mime_type(resume.name)
+                    pages = [llm.transcribe_image(resume.path.read_bytes(), mime_type=mime)]
+                resume.text = "\n".join(pages)
+            except Exception as exc:
+                print(f"[warn] transcription of {resume.name} failed: {exc}")
         if resume.text.strip():
             usable.append(resume)
         else:
-            print(f"[warn] No text from {resume.name} after transcription; skipping.")
+            print(
+                f"[note] Skipping image-based {resume.name}: install Tesseract for fast local OCR, "
+                "or rerun with --ocr to transcribe it with the model."
+            )
     return usable
 
 
@@ -79,7 +89,7 @@ def match_job(
 def run(config: Config, jobs: list[JobPosting], resumes: list[Resume]) -> dict[str, list[MatchResult]]:
     """Run the full matching pipeline. Returns {job source: top-N results}."""
     llm = LocalLLM(config)
-    resumes = transcribe_resumes(llm, resumes, enabled=config.ocr)
+    resumes = transcribe_resumes(llm, resumes, vision_fallback=config.ocr)
     progress = Progress(total=len(jobs) * len(resumes))
     top_matches: dict[str, list[MatchResult]] = {}
     for job in jobs:

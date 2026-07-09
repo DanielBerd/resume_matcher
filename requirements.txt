@@ -2,5 +2,12 @@
 openai>=1.40.0        # OpenAI-compatible client, used to talk to LM Studio's local server
 pymupdf>=1.24.0       # PDF text extraction
 python-docx>=1.1.0    # .docx text extraction
+pytesseract>=0.3.10   # OCR for scanned/image resumes
+Pillow>=10.0          # image handling for pytesseract
+# pytesseract also needs the Tesseract binary itself:
+#   Windows: https://github.com/UB-Mannheim/tesseract/wiki (default install path is auto-detected)
+#   macOS:   brew install tesseract
+#   Linux:   apt install tesseract-ocr
+# Without it, image-based resumes fall back to model vision transcription (--ocr) or are skipped.
 # .doc (legacy Word) files require an external converter, e.g. LibreOffice or antiword.
 # See resume_matcher/documents.py for the stub.

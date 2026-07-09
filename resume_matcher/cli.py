@@ -36,8 +36,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--ocr",
         action="store_true",
-        help="Transcribe image-based resumes (scanned PDFs, images) with the model's "
-        "vision input before scoring; slow on CPU-heavy setups, so off by default",
+        help="Fall back to the model's vision input for image-based resumes when "
+        "Tesseract is not installed or extracts no text (slow: minutes per page)",
     )
     parser.add_argument(
         "--verbose",

@@ -51,6 +51,37 @@ def load_resumes(resumes_dir: Path) -> list[Resume]:
     return resumes
 
 
+def tesseract_available() -> bool:
+    """Check for the Tesseract binary, including the default Windows install
+    location, which is typically not on PATH."""
+    if shutil.which("tesseract"):
+        return True
+    windows_default = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+    if windows_default.exists():
+        import pytesseract
+
+        pytesseract.pytesseract.tesseract_cmd = str(windows_default)
+        return True
+    return False
+
+
+def ocr_with_tesseract(path: Path) -> str:
+    """Extract text from an image-based resume (scanned PDF or image file)
+    using local Tesseract OCR. Fast and fully offline."""
+    import io
+
+    import pytesseract
+    from PIL import Image
+
+    if path.suffix.lower() == ".pdf":
+        # Tesseract accuracy benefits from higher resolution than the vision
+        # model needs, so render at 300 dpi here.
+        images = [Image.open(io.BytesIO(data)) for data in pdf_page_images(path, dpi=300)]
+    else:
+        images = [Image.open(path)]
+    return "\n".join(pytesseract.image_to_string(image) for image in images)
+
+
 def pdf_page_images(path: Path, dpi: int = 100, max_pages: int = 4) -> list[bytes]:
     """Render the first pages of a PDF as PNG images for vision transcription."""
     import fitz  # pymupdf
