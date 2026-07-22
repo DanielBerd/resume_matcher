@@ -33,11 +33,11 @@ installed; `.pdf` and `.docx` work out of the box.
 ## Usage
 
 The simplest way to run it: put your job postings in `jobs/` and resumes in
-`resumes/`, then **double-click `run_matcher.py`** (or run `python
-run_matcher.py`). It scores everything, opens the HTML report in your browser,
-and keeps the window open so you can read any messages. On Windows this needs
-Python installed with the "py launcher" (the default), so `.py` files run on
-double-click.
+`resumes/`, then run the launcher. It scores everything, opens the HTML report
+in your browser, and keeps the window open so you can read any messages.
+
+- **Windows:** double-click **`run_matcher.bat`**.
+- **macOS / Linux:** double-click or run **`run_matcher.py`** (`python run_matcher.py`).
 
 For flags and test mode, use the module form directly:
 
@@ -97,6 +97,7 @@ variables `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL` are also honored (see
 | `resume_matcher/report.py` | Print top matches and save HTML/text/JSON reports |
 | `resume_matcher/cli.py` | Command-line entry point |
 | `run_matcher.py` | Double-click launcher (runs the tool, opens the report) |
+| `run_matcher.bat` | Windows double-click launcher (finds Python, runs `run_matcher.py`) |
 
 ## Tests
 
