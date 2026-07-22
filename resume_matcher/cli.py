@@ -140,7 +140,7 @@ def main(argv: list[str] | None = None) -> int:
     top_matches = run(config, jobs, resumes)
     print_report(top_matches)
     saved = write_report(top_matches, config.results_dir)
-    print(f"\nResults saved to {saved} (and .json alongside)")
+    print(f"\nResults saved to {saved} (open in a browser; .txt and .json saved alongside)")
     return 0
 
 

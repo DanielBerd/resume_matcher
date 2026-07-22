@@ -50,8 +50,12 @@ each job, a generalist, and a marketing resume that should score low across
 the board — so you can eyeball whether the model's rankings make sense.
 
 While running, each scoring line shows overall progress across all
-job × resume pairs. Results are printed and also saved as text + JSON under
-`results/` (gitignored, one timestamped pair per run).
+job × resume pairs. Results are printed and also saved under `results/`
+(gitignored, one timestamped set per run) in three formats: an HTML report,
+plain text, and JSON. Open the `.html` file in a browser for a readable
+summary — each job is an expandable section listing its top matches with
+color-coded score badges, and every resume name links to the source file on
+disk.
 
 Scanned PDFs with no text layer, and plain image files (.png/.jpg/.webp), are
 OCR-ed with [Tesseract](https://github.com/tesseract-ocr/tesseract)
@@ -81,7 +85,7 @@ variables `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL` are also honored (see
 | `resume_matcher/llm_client.py` | Talk to LM Studio's OpenAI-compatible server |
 | `resume_matcher/scoring.py` | Match prompt + robust parsing of the model's score/comment |
 | `resume_matcher/matcher.py` | Loop jobs × resumes, sort, keep top N |
-| `resume_matcher/report.py` | Print top matches per job |
+| `resume_matcher/report.py` | Print top matches and save HTML/text/JSON reports |
 | `resume_matcher/cli.py` | Command-line entry point |
 
 ## Tests
