@@ -89,6 +89,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Print the raw model reply and finish reason for every scoring call",
     )
+    parser.add_argument(
+        "--open",
+        action="store_true",
+        help="Open the HTML report in a browser when the run finishes",
+    )
     args = parser.parse_args(argv)
 
     config = Config()
@@ -141,6 +146,10 @@ def main(argv: list[str] | None = None) -> int:
     print_report(top_matches)
     saved = write_report(top_matches, config.results_dir)
     print(f"\nResults saved to {saved} (open in a browser; .txt and .json saved alongside)")
+    if args.open:
+        import webbrowser
+
+        webbrowser.open(saved.resolve().as_uri())
     return 0
 
 
