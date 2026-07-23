@@ -9,5 +9,6 @@ Pillow>=10.0          # image handling for pytesseract
 #   macOS:   brew install tesseract
 #   Linux:   apt install tesseract-ocr
 # Without it, image-based resumes fall back to model vision transcription (--ocr) or are skipped.
+pywin32>=306 ; sys_platform == "win32"   # Outlook inbox watching (Windows only)
 # .doc (legacy Word) files require an external converter, e.g. LibreOffice or antiword.
 # See resume_matcher/documents.py for the stub.

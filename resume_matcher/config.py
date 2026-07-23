@@ -39,7 +39,7 @@ class Config:
     # Folder containing resumes (.pdf, .doc, .docx).
     resumes_dir: Path = field(default_factory=lambda: Path("resumes"))
     # Folder containing job postings saved from email (.txt or .eml files).
-    # TODO: replace/augment with live IMAP fetching (see email_ingest.py).
+    # For live inbox watching instead of a folder, see email_watch.py.
     jobs_dir: Path = field(default_factory=lambda: Path("jobs"))
 
     # --- Matching ---
@@ -49,7 +49,20 @@ class Config:
     # Run results (text + JSON) are written here; the folder is gitignored.
     results_dir: Path = field(default_factory=lambda: Path("results"))
 
-    # --- Email ingestion (stub — see email_ingest.py) ---
+    # --- Outlook inbox watching (Windows desktop Outlook via COM) ---
+    # See outlook.py / email_watch.py. Polls the inbox for unread job emails,
+    # matches each against all resumes, and emails the results back.
+    # Only process unread emails whose subject contains this text (case-
+    # insensitive). Empty means every unread email is treated as a job posting.
+    outlook_subject_filter: str = os.environ.get("RM_SUBJECT_FILTER", "")
+    # Where to send results. Empty means reply to the sender of each job email.
+    result_recipient: str = os.environ.get("RM_RESULT_TO", "")
+    # Seconds between inbox polls.
+    poll_interval: int = int(os.environ.get("RM_POLL_INTERVAL", "60"))
+    # Mark a job email as read once its results have been sent.
+    mark_processed_read: bool = True
+
+    # --- Email ingestion, file-based (see email_ingest.py) ---
     imap_host: str = os.environ.get("RM_IMAP_HOST", "")
     imap_user: str = os.environ.get("RM_IMAP_USER", "")
     imap_password: str = os.environ.get("RM_IMAP_PASSWORD", "")

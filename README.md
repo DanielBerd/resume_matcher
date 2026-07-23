@@ -85,11 +85,42 @@ Options: `--top N` (default 5), `--model NAME`, `--base-url URL`. Environment
 variables `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL` are also honored (see
 `resume_matcher/config.py`).
 
+## Watching an Outlook inbox
+
+Instead of saving postings to `jobs/` by hand, the tool can watch your Outlook
+inbox: when a job email arrives it scores every resume against it and emails
+the ranked results back to the sender.
+
+Start it by double-clicking **`watch_inbox.bat`** (Windows) or running
+`python watch_inbox.py`. It polls the inbox on an interval and keeps running
+until you close the window.
+
+**Requirements and limits** — this uses the *classic* Outlook desktop app
+through COM automation, so it uses your already-signed-in mailbox with no
+passwords or setup:
+
+- **Native Windows only** — it does not work under WSL, macOS, or Linux.
+- The **classic** Outlook desktop app must be installed and configured; the
+  newer "Outlook for Windows" app does not expose COM automation.
+- Needs `pywin32`, installed automatically on Windows by `requirements.txt`.
+
+Useful settings (flags to `watch_inbox.py` / `python -m resume_matcher.email_watch`,
+or the matching `RM_*` environment variables):
+
+- `--subject-filter TEXT` — only process unread emails whose subject contains
+  TEXT (e.g. `--subject-filter "[job]"`), so not every email is treated as a
+  posting. Default: every unread email.
+- `--to ADDRESS` — send all results to a fixed address instead of replying to
+  each sender.
+- `--interval SECONDS` — how often to poll (default 60).
+
 ## Project layout
 
 | Module | Responsibility |
 | --- | --- |
 | `resume_matcher/email_ingest.py` | Load job postings from `jobs/` folder; IMAP fetch stub |
+| `resume_matcher/outlook.py` | Read/send mail via the Windows Outlook desktop app (COM) |
+| `resume_matcher/email_watch.py` | Poll the inbox, match each job email, reply with results |
 | `resume_matcher/documents.py` | Extract text from PDF/DOCX/DOC resumes |
 | `resume_matcher/llm_client.py` | Talk to LM Studio's OpenAI-compatible server |
 | `resume_matcher/scoring.py` | Match prompt + robust parsing of the model's score/comment |
@@ -98,6 +129,7 @@ variables `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL` are also honored (see
 | `resume_matcher/cli.py` | Command-line entry point |
 | `run_matcher.py` | Double-click launcher (runs the tool, opens the report) |
 | `run_matcher.bat` | Windows double-click launcher (finds Python, runs `run_matcher.py`) |
+| `watch_inbox.py` / `.bat` | Launchers for the Outlook inbox watcher |
 
 ## Tests
 
