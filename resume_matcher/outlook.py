@@ -53,6 +53,17 @@ class OutlookMailbox:
         self._app = win32com.client.Dispatch("Outlook.Application")
         self._ns = self._app.GetNamespace("MAPI")
 
+    def own_address(self) -> str:  # pragma: no cover - Windows/COM-only
+        """The SMTP address of the monitored mailbox (the signed-in account)."""
+        try:
+            return self._ns.Session.Accounts.Item(1).SmtpAddress
+        except Exception:
+            pass
+        try:
+            return self._ns.CurrentUser.AddressEntry.GetExchangeUser().PrimarySmtpAddress
+        except Exception:
+            return getattr(self._ns.CurrentUser, "Address", "") or ""
+
     def fetch_unread_jobs(self, subject_filter: str = "") -> list[InboxJob]:  # pragma: no cover
         """Return unread inbox emails (optionally filtered by subject text)."""
         inbox = self._ns.GetDefaultFolder(_OL_FOLDER_INBOX)

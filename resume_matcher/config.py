@@ -55,7 +55,8 @@ class Config:
     # Only process unread emails whose subject contains this text (case-
     # insensitive). Empty means every unread email is treated as a job posting.
     outlook_subject_filter: str = os.environ.get("RM_SUBJECT_FILTER", "")
-    # Where to send results. Empty means reply to the sender of each job email.
+    # Where to send results. Empty means send them to the monitored mailbox
+    # itself (the signed-in Outlook account), so you receive the matches.
     result_recipient: str = os.environ.get("RM_RESULT_TO", "")
     # Seconds between inbox polls.
     poll_interval: int = int(os.environ.get("RM_POLL_INTERVAL", "60"))

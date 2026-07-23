@@ -26,15 +26,18 @@ from .report import format_html_report
 def process_once(config: Config, mailbox, llm: LocalLLM, resumes: list) -> int:
     """Handle all currently-unread job emails. Returns how many were processed."""
     jobs = mailbox.fetch_unread_jobs(config.outlook_subject_filter)
+    # Results go back to the monitored mailbox itself by default, so you
+    # receive the matches for job offers that land in your inbox. A configured
+    # result_recipient overrides this.
+    to_addr = config.result_recipient or mailbox.own_address()
     for job in jobs:
         print(f"\nNew job email: {job.posting.title} (from {job.sender_address})")
         results = match_job(llm, job.posting, resumes, config.top_n, Progress(len(resumes)))
         top = {job.posting.source: results}
         html_body = format_html_report(top, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 
-        to_addr = config.result_recipient or job.sender_address
         if not to_addr:
-            print("  [warn] no recipient (sender unknown, no result_recipient set); skipping send.")
+            print("  [warn] could not determine a recipient address; skipping send.")
             continue
         mailbox.send_result(to_addr, f"Resume matches: {job.posting.title}", html_body)
         print(f"  Sent {len(results)} match(es) to {to_addr}")

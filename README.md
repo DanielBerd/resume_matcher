@@ -89,7 +89,8 @@ variables `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL` are also honored (see
 
 Instead of saving postings to `jobs/` by hand, the tool can watch your Outlook
 inbox: when a job email arrives it scores every resume against it and emails
-the ranked results back to the sender.
+the ranked results back to your own mailbox (the account being watched), so
+the matches land in the same inbox.
 
 Start it by double-clicking **`watch_inbox.bat`** (Windows) or running
 `python watch_inbox.py`. It polls the inbox on an interval and keeps running
@@ -110,8 +111,8 @@ or the matching `RM_*` environment variables):
 - `--subject-filter TEXT` — only process unread emails whose subject contains
   TEXT (e.g. `--subject-filter "[job]"`), so not every email is treated as a
   posting. Default: every unread email.
-- `--to ADDRESS` — send all results to a fixed address instead of replying to
-  each sender.
+- `--to ADDRESS` — send all results to a fixed address instead of back to the
+  monitored mailbox.
 - `--interval SECONDS` — how often to poll (default 60).
 
 ## Project layout
