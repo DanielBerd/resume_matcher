@@ -85,7 +85,20 @@ Options: `--top N` (default 5), `--model NAME`, `--base-url URL`. Environment
 variables `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL` are also honored (see
 `resume_matcher/config.py`).
 
-## Watching an Outlook inbox
+## Comparing models
+
+To decide between models (say a smaller, faster one vs a larger one), run both
+over the same data and compare side by side:
+
+```bash
+python -m resume_matcher.compare --test-mode google/gemma-4-12b-qat google/gemma-4-e4b
+```
+
+It scores every resume against every job with each model in turn, then writes
+`results/compare_<timestamp>.html`: a per-job table of each model's score and
+rank for every resume, the score delta between two models, a note on whether
+they agree on the top-N ranking, and a speed summary (total and per-call time).
+Pass `--jobs`/`--resumes` to compare on your own data instead of the examples.
 
 Instead of saving postings to `jobs/` by hand, the tool can watch your Outlook
 inbox: when a job email arrives it scores every resume against it and emails
@@ -127,6 +140,7 @@ or the matching `RM_*` environment variables):
 | `resume_matcher/scoring.py` | Match prompt + robust parsing of the model's score/comment |
 | `resume_matcher/matcher.py` | Loop jobs × resumes, sort, keep top N |
 | `resume_matcher/report.py` | Print top matches and save HTML/text/JSON reports |
+| `resume_matcher/compare.py` | Score the set with multiple models and report them side by side |
 | `resume_matcher/cli.py` | Command-line entry point |
 | `run_matcher.py` | Double-click launcher (runs the tool, opens the report) |
 | `run_matcher.bat` | Windows double-click launcher (finds Python, runs `run_matcher.py`) |
