@@ -52,6 +52,10 @@ For a small desktop window instead of a console, double-click **`run_gui.bat`**
 - Pick the model from the dropdown (populated from LM Studio), watch progress
   and log output live, and the HTML report opens automatically when finished.
 
+On Windows the launcher starts the app with `pythonw`, so you get just the
+window with no console behind it; if it cannot start, the reason appears in a
+dialog box.
+
 Drag-and-drop needs the optional `tkinterdnd2` package from
 `requirements.txt`; without it the drop zone still works as click-to-browse.
 The window itself needs tkinter, which ships with Python on Windows and macOS
