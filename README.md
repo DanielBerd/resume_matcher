@@ -39,6 +39,26 @@ in your browser, and keeps the window open so you can read any messages.
 - **Windows:** double-click **`run_matcher.bat`**.
 - **macOS / Linux:** double-click or run **`run_matcher.py`** (`python run_matcher.py`).
 
+### Window (drag and drop)
+
+For a small desktop window instead of a console, double-click **`run_gui.bat`**
+(Windows) or run `python run_gui.py`:
+
+- **Drop a job posting** (`.txt`, `.eml`, `.pdf`, `.docx`) on the drop zone to
+  score that one job against every resume in `resumes/`. Clicking the zone
+  opens a file browser instead.
+- **"Run all jobs in jobs/ folder"** does the regular matching over every
+  posting in `jobs/`.
+- Pick the model from the dropdown (populated from LM Studio), watch progress
+  and log output live, and the HTML report opens automatically when finished.
+
+Drag-and-drop needs the optional `tkinterdnd2` package from
+`requirements.txt`; without it the drop zone still works as click-to-browse.
+The window itself needs tkinter, which ships with Python on Windows and macOS
+(on Linux: `sudo apt install python3-tk`).
+
+### Command line
+
 For flags and test mode, use the module form directly:
 
 ```bash
@@ -100,6 +120,8 @@ rank for every resume, the score delta between two models, a note on whether
 they agree on the top-N ranking, and a speed summary (total and per-call time).
 Pass `--jobs`/`--resumes` to compare on your own data instead of the examples.
 
+## Watching an Outlook inbox
+
 Instead of saving postings to `jobs/` by hand, the tool can watch your Outlook
 inbox: when a job email arrives it scores every resume against it and emails
 the ranked results back to your own mailbox (the account being watched), so
@@ -142,9 +164,11 @@ or the matching `RM_*` environment variables):
 | `resume_matcher/report.py` | Print top matches and save HTML/text/JSON reports |
 | `resume_matcher/compare.py` | Score the set with multiple models and report them side by side |
 | `resume_matcher/cli.py` | Command-line entry point |
+| `resume_matcher/gui.py` | Desktop window: drag-and-drop a job, or run the whole folder |
 | `run_matcher.py` | Double-click launcher (runs the tool, opens the report) |
 | `run_matcher.bat` | Windows double-click launcher (finds Python, runs `run_matcher.py`) |
 | `watch_inbox.py` / `.bat` | Launchers for the Outlook inbox watcher |
+| `run_gui.py` / `.bat` | Launchers for the desktop window |
 
 ## Tests
 

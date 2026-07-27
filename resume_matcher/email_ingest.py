@@ -37,6 +37,32 @@ def load_jobs_from_folder(jobs_dir: Path) -> list[JobPosting]:
     return postings
 
 
+JOB_FILE_EXTENSIONS = {".txt", ".md", ".eml", ".pdf", ".docx", ".doc"}
+
+
+def load_job_from_file(path: Path) -> JobPosting:
+    """Load a single job posting from one file.
+
+    Accepts plain text, saved emails, and Word/PDF documents - job postings
+    arrive in all of these. Used by the GUI's drag-and-drop.
+    """
+    suffix = path.suffix.lower()
+    if suffix == ".eml":
+        return _parse_eml(path)
+    if suffix in {".txt", ".md"}:
+        return JobPosting(
+            source=path.name, title=path.stem, body=path.read_text(encoding="utf-8", errors="replace")
+        )
+    if suffix in {".pdf", ".docx", ".doc"}:
+        from .documents import extract_text
+
+        return JobPosting(source=path.name, title=path.stem, body=extract_text(path))
+    raise ValueError(
+        f"Unsupported job posting file: {path.name} "
+        f"(expected one of {', '.join(sorted(JOB_FILE_EXTENSIONS))})"
+    )
+
+
 def _parse_eml(path: Path) -> JobPosting:
     """Extract subject and plain-text body from a saved email message."""
     msg = email.message_from_bytes(path.read_bytes(), policy=email.policy.default)
