@@ -184,6 +184,3 @@ pytest
 ## Next steps (not yet implemented)
 
 - Live IMAP email fetching (`fetch_jobs_from_imap` stub)
-- Persisting scores to SQLite between runs
-- Truncation/chunking for resumes or postings that exceed the model context
-- Optional web UI (Streamlit/Gradio)
