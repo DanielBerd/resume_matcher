@@ -44,6 +44,11 @@ in your browser, and keeps the window open so you can read any messages.
 For a small desktop window instead of a console, double-click **`run_gui.bat`**
 (Windows) or run `python run_gui.py`:
 
+![The Resume Matcher window](docs/gui_window.png)
+
+*(Captured on Linux; on Windows the layout is the same but the controls use
+native Windows styling.)*
+
 - **Drop a job posting** (`.txt`, `.eml`, `.pdf`, `.docx`) on the drop zone to
   score that one job against every resume in `resumes/`. Clicking the zone
   opens a file browser instead.
