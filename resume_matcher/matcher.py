@@ -5,6 +5,9 @@ Step 4 of the workflow: collect ratings per job, then report the top 5.
 
 from __future__ import annotations
 
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from .config import Config
 from .documents import Resume, ocr_with_tesseract, pdf_page_images, tesseract_available
 from .email_ingest import JobPosting
@@ -13,16 +16,22 @@ from .scoring import MatchResult, score_resume
 
 
 class Progress:
-    """Counter for overall progress across all job x resume pairs."""
+    """Counter for overall progress across all job x resume pairs.
+
+    Ticked from worker threads when scoring concurrently, so it takes a lock.
+    """
 
     def __init__(self, total: int):
         self.total = total
         self.done = 0
+        self._lock = threading.Lock()
 
     def tick(self) -> str:
-        self.done += 1
-        percent = 100 * self.done // self.total if self.total else 100
-        return f"[{self.done}/{self.total} total, {percent}%]"
+        with self._lock:
+            self.done += 1
+            done = self.done
+        percent = 100 * done // self.total if self.total else 100
+        return f"[{done}/{self.total} total, {percent}%]"
 
 
 def transcribe_resumes(llm: LocalLLM, resumes: list[Resume], vision_fallback: bool) -> list[Resume]:
@@ -73,16 +82,39 @@ def match_job(
     resumes: list[Resume],
     top_n: int,
     progress: Progress,
+    concurrency: int = 1,
 ) -> list[MatchResult]:
-    """Score all resumes against one job posting and return the top N results."""
+    """Score all resumes against one job posting and return the top N results.
+
+    With concurrency > 1 several resumes are scored at once. Each request is
+    still a separate, stateless call containing only this job and one resume -
+    concurrency changes how many are in flight, never what the model sees.
+    """
+    lock = threading.Lock()
     results: list[MatchResult] = []
-    for resume in resumes:
-        print(f"  {progress.tick()} scoring {resume.name} ...")
+
+    def score_one(resume: Resume) -> None:
         try:
-            results.append(score_resume(llm, job, resume))
+            result = score_resume(llm, job, resume)
         except Exception as exc:  # keep going if one call fails
-            print(f"  [warn] failed to score {resume.name}: {exc}")
-    results.sort(key=lambda r: r.score, reverse=True)
+            print(f"  {progress.tick()} [warn] failed to score {resume.name}: {exc}")
+            return
+        with lock:
+            results.append(result)
+        print(f"  {progress.tick()} {resume.name}: {result.score}/100")
+
+    if concurrency > 1:
+        with ThreadPoolExecutor(max_workers=concurrency) as pool:
+            futures = [pool.submit(score_one, resume) for resume in resumes]
+            for future in as_completed(futures):
+                future.result()  # surface unexpected errors in score_one itself
+    else:
+        for resume in resumes:
+            score_one(resume)
+
+    # Sort by score, then name, so equal scores order deterministically
+    # regardless of the order concurrent replies arrived in.
+    results.sort(key=lambda r: (-r.score, r.resume.name))
     return results[:top_n]
 
 
@@ -94,5 +126,7 @@ def run(config: Config, jobs: list[JobPosting], resumes: list[Resume]) -> dict[s
     top_matches: dict[str, list[MatchResult]] = {}
     for job in jobs:
         print(f"\nJob: {job.title} ({job.source})")
-        top_matches[job.source] = match_job(llm, job, resumes, config.top_n, progress)
+        top_matches[job.source] = match_job(
+            llm, job, resumes, config.top_n, progress, config.concurrency
+        )
     return top_matches

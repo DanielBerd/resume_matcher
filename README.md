@@ -114,6 +114,43 @@ Options: `--top N` (default 5), `--model NAME`, `--base-url URL`. Environment
 variables `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL` are also honored (see
 `resume_matcher/config.py`).
 
+## Throughput (concurrent scoring)
+
+Scoring calls are independent, so the tool keeps several in flight at once and
+lets the server batch them. This is a large speed-up on GPU: in a local
+benchmark against a mock server, a 30-call run went from 12.3s to 4.3s.
+
+Each request still contains exactly one job and one resume, so concurrency
+changes only how many are in flight - never what the model sees.
+
+Set it with `-j` / `--concurrency` (default 4, `1` for sequential), or the
+`RM_CONCURRENCY` environment variable:
+
+```bash
+python -m resume_matcher -j 4
+```
+
+**Matching settings in LM Studio** (Load tab; reload the model to apply):
+
+- **Max Concurrent Predictions** - must be >= your `-j` value, or the extra
+  requests just queue on the server and you gain nothing. Set both to 4 to
+  start.
+- **Context Length** - llama.cpp-based servers divide the context across
+  concurrent slots, so the per-request budget is roughly
+  `context length / Max Concurrent Predictions`. A job + resume + reply needs
+  ~3-4k tokens, so for 4 slots set the context to **16384**. If replies start
+  coming back empty or truncated after raising concurrency, this is the cause:
+  raise the context or lower `-j`.
+- **GPU Offload** - put as many layers on the GPU as fit. Batching wins come
+  from the GPU decoding several sequences at once; a mostly-CPU model is
+  memory-bandwidth-bound and gains much less.
+- Leave **Flash Attention** and **Offload KV Cache to GPU** on - both help the
+  larger context that concurrency needs.
+
+Note that resumes are scored concurrently *within* a job, while jobs are
+processed one after another, so a run with many jobs and few resumes will not
+saturate a high `-j`.
+
 ## Comparing models
 
 To decide between models (say a smaller, faster one vs a larger one), run both

@@ -75,6 +75,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--top", type=int, default=None, help="Number of top matches to report (default 5)")
     parser.add_argument(
+        "-j",
+        "--concurrency",
+        type=int,
+        default=None,
+        help="Scoring requests to keep in flight at once (default 4; 1 = sequential). "
+        "Match it to LM Studio's Max Concurrent Predictions.",
+    )
+    parser.add_argument(
         "--model", default=None, help="Model name as loaded in LM Studio (skips the model picker)"
     )
     parser.add_argument("--base-url", default=None, help="LM Studio server URL (default http://localhost:1234/v1)")
@@ -108,6 +116,8 @@ def main(argv: list[str] | None = None) -> int:
         config.resumes_dir = args.resumes
     if args.top:
         config.top_n = args.top
+    if args.concurrency:
+        config.concurrency = max(1, args.concurrency)
     if args.model:
         config.llm_model = args.model
     if args.base_url:
@@ -141,6 +151,8 @@ def main(argv: list[str] | None = None) -> int:
     if not args.model and not choose_model(config):
         return 1
     print(f"Model: {config.llm_model} @ {config.llm_base_url}")
+    if config.concurrency > 1:
+        print(f"Scoring up to {config.concurrency} resumes at a time.")
 
     top_matches = run(config, jobs, resumes)
     print_report(top_matches)

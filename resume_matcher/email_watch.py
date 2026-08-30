@@ -32,7 +32,9 @@ def process_once(config: Config, mailbox, llm: LocalLLM, resumes: list) -> int:
     to_addr = config.result_recipient or mailbox.own_address()
     for job in jobs:
         print(f"\nNew job email: {job.posting.title} (from {job.sender_address})")
-        results = match_job(llm, job.posting, resumes, config.top_n, Progress(len(resumes)))
+        results = match_job(
+            llm, job.posting, resumes, config.top_n, Progress(len(resumes)), config.concurrency
+        )
         top = {job.posting.source: results}
         html_body = format_html_report(top, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 

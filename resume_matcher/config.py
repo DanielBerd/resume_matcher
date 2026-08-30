@@ -44,6 +44,11 @@ class Config:
 
     # --- Matching ---
     top_n: int = 5
+    # How many scoring requests to keep in flight at once. The server batches
+    # concurrent requests, so this raises throughput a lot on GPU. Keep it at
+    # or below LM Studio's "Max Concurrent Predictions", and make sure the
+    # context length covers concurrency x per-request tokens (see README).
+    concurrency: int = int(os.environ.get("RM_CONCURRENCY", "4"))
 
     # --- Output ---
     # Run results (text + JSON) are written here; the folder is gitignored.
