@@ -18,19 +18,34 @@ from .llm_client import list_models
 from .report import print_report, write_report
 
 
+def pick_default_model(models: list[str], preferred: str) -> str:
+    """Pick the model to preselect: the first whose id contains the preferred
+    name (case-insensitive), else the first model. Server-side ids carry
+    org prefixes and quantization suffixes that we do not want to hardcode."""
+    needle = preferred.lower()
+    for model in models:
+        if needle and needle in model.lower():
+            return model
+    return models[0]
+
+
 def choose_model(config: Config) -> bool:
-    """Query LM Studio for available models and let the user pick one.
+    """Query the model server for available models and let the user pick one.
 
     Returns False when the server is unreachable or has no models loaded.
     """
     try:
         models = list_models(config)
     except Exception as exc:
-        print(f"error: cannot reach LM Studio at {config.llm_base_url}: {exc}", file=sys.stderr)
-        print("Is the server running? (LM Studio > Developer > Start Server)", file=sys.stderr)
+        print(f"error: cannot reach the model server at {config.llm_base_url}: {exc}", file=sys.stderr)
+        print(
+            "Is Unsloth Desktop running with its server started? If it uses a different "
+            "address, pass --base-url or set RM_LLM_BASE_URL.",
+            file=sys.stderr,
+        )
         return False
     if not models:
-        print("error: LM Studio reports no models. Load a model first.", file=sys.stderr)
+        print("error: the model server reports no models. Load a model first.", file=sys.stderr)
         return False
 
     if len(models) == 1:
@@ -38,14 +53,14 @@ def choose_model(config: Config) -> bool:
         print(f"Using the only available model: {models[0]}")
         return True
 
-    default = config.llm_model if config.llm_model in models else models[0]
+    default = pick_default_model(models, config.llm_model)
     if not sys.stdin.isatty():
         # Non-interactive run (piped/CI): don't block on input.
         config.llm_model = default
         print(f"Non-interactive session; using model: {default}")
         return True
 
-    print("Available models in LM Studio:")
+    print("Available models:")
     for i, model in enumerate(models, start=1):
         marker = " (default)" if model == default else ""
         print(f"  {i}. {model}{marker}")
@@ -63,7 +78,7 @@ def choose_model(config: Config) -> bool:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="resume_matcher",
-        description="Score a folder of resumes against job postings using a local Gemma model in LM Studio.",
+        description="Score a folder of resumes against job postings using a local Gemma model.",
     )
     parser.add_argument("--jobs", type=Path, default=None, help="Folder with job postings (.txt/.eml)")
     parser.add_argument("--resumes", type=Path, default=None, help="Folder with resumes (.pdf/.doc/.docx)")
@@ -80,12 +95,12 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=None,
         help="Scoring requests to keep in flight at once (default 4; 1 = sequential). "
-        "Match it to LM Studio's Max Concurrent Predictions.",
+        "Match it to the server's parallel-request limit.",
     )
     parser.add_argument(
-        "--model", default=None, help="Model name as loaded in LM Studio (skips the model picker)"
+        "--model", default=None, help="Model id as reported by the server (skips the model picker)"
     )
-    parser.add_argument("--base-url", default=None, help="LM Studio server URL (default http://localhost:1234/v1)")
+    parser.add_argument("--base-url", default=None, help="Model server URL, including /v1 (default http://localhost:8888/v1)")
     parser.add_argument(
         "--ocr",
         action="store_true",

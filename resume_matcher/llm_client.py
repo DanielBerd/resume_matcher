@@ -1,7 +1,7 @@
-"""Client for the local Gemma model served by LM Studio.
+"""Client for the local Gemma model served by Unsloth Desktop.
 
-LM Studio exposes an OpenAI-compatible API (default http://localhost:1234/v1),
-so we use the openai client pointed at the local server.
+Unsloth Desktop exposes an OpenAI-compatible API, so we use the openai client
+pointed at the local server. Any other OpenAI-compatible server works too.
 """
 
 from __future__ import annotations
@@ -89,7 +89,7 @@ def guess_mime_type(filename: str) -> str:
 
 
 def list_models(config: Config) -> list[str]:
-    """Return the model ids available on the LM Studio server."""
+    """Return the model ids available on the local model server."""
     client = OpenAI(base_url=config.llm_base_url, api_key=config.llm_api_key, timeout=10)
     return [model.id for model in client.models.list()]
 

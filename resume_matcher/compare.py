@@ -1,4 +1,4 @@
-"""Compare two or more LM Studio models on the same jobs and resumes.
+"""Compare two or more local models on the same jobs and resumes.
 
 Runs the full job x resume matrix through each model, times it, and writes a
 side-by-side HTML report: per-resume scores from each model, where the top-N
@@ -6,7 +6,7 @@ rankings diverge, and how long each model took. Use it to decide whether a
 smaller/faster model (e.g. Gemma 4 E4B) ranks resumes as well as a larger one
 (e.g. Gemma 4 12B QAT) for your data.
 
-The model-running part needs a live LM Studio; the report building and
+The model-running part needs a live model server; the report building and
 rendering are pure functions so they can be tested without one.
 """
 
@@ -172,13 +172,13 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = argparse.ArgumentParser(
         prog="resume_matcher.compare",
-        description="Compare LM Studio models on the same jobs/resumes, side by side.",
+        description="Compare local models on the same jobs/resumes, side by side.",
     )
-    parser.add_argument("models", nargs="+", help="Two or more model names as loaded in LM Studio")
+    parser.add_argument("models", nargs="+", help="Two or more model ids as reported by the server")
     parser.add_argument("--test-mode", action="store_true", help="Use the bundled examples/")
     parser.add_argument("--jobs", type=Path, default=None)
     parser.add_argument("--resumes", type=Path, default=None)
-    parser.add_argument("--base-url", default=None, help="LM Studio server URL")
+    parser.add_argument("--base-url", default=None, help="Model server URL, including /v1")
     args = parser.parse_args(argv)
 
     config = Config()

@@ -10,13 +10,20 @@ from pathlib import Path
 
 @dataclass
 class Config:
-    # --- Local LLM (LM Studio) ---
-    # LM Studio exposes an OpenAI-compatible server, by default at this URL.
-    llm_base_url: str = os.environ.get("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
-    # LM Studio ignores the API key but the OpenAI client requires one.
-    llm_api_key: str = os.environ.get("LMSTUDIO_API_KEY", "lm-studio")
-    # Model identifier as loaded in LM Studio.
-    llm_model: str = os.environ.get("LMSTUDIO_MODEL", "google/gemma-4-12b-qat")
+    # --- Local LLM server (Unsloth Desktop) ---
+    # Unsloth Desktop serves models over an OpenAI-compatible API; any server
+    # speaking that API works. Copy the URL from Unsloth Desktop's server panel
+    # if it differs from this default (include the /v1 suffix).
+    llm_base_url: str = os.environ.get("RM_LLM_BASE_URL", "http://localhost:8888/v1")
+    # Local servers usually ignore the key, but the OpenAI client requires one.
+    llm_api_key: str = os.environ.get("RM_LLM_API_KEY", "local")
+    # Preferred model. Matched case-insensitively as a substring of the ids the
+    # server reports, so it need not be the exact id. The supported Gemma 4
+    # QAT variants, by hardware (see README for details):
+    #   gemma-4-e4b-it-qat      ~6 GB   - small VRAM, or CPU/RAM
+    #   gemma-4-12b-it-qat      ~12 GB  - the default
+    #   gemma-4-26b-a4b-it-qat  ~24 GB  - best quality, MoE so still fast
+    llm_model: str = os.environ.get("RM_LLM_MODEL", "gemma-4-12b")
     llm_temperature: float = 0.1
     # Generous budget: reasoning-tuned models emit thinking tokens before the
     # answer, and those count against this limit.
@@ -46,8 +53,8 @@ class Config:
     top_n: int = 5
     # How many scoring requests to keep in flight at once. The server batches
     # concurrent requests, so this raises throughput a lot on GPU. Keep it at
-    # or below LM Studio's "Max Concurrent Predictions", and make sure the
-    # context length covers concurrency x per-request tokens (see README).
+    # or below the server's parallel-request limit, and make sure the context
+    # length covers concurrency x per-request tokens (see README).
     concurrency: int = int(os.environ.get("RM_CONCURRENCY", "4"))
 
     # --- Output ---

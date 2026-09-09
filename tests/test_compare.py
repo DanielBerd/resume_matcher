@@ -1,6 +1,6 @@
 """Tests for the model-comparison report logic, using fabricated runs.
 
-No LM Studio involved: ModelRun objects are built by hand and fed to the pure
+No model server involved: ModelRun objects are built by hand and fed to the pure
 report functions.
 """
 

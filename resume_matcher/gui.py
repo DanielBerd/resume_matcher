@@ -146,7 +146,8 @@ class MatcherWindow:
             models = list_models(self.config)
         except Exception as exc:
             self.queue.put(("models", []))
-            self.queue.put(("log", f"[warn] could not reach LM Studio: {exc}"))
+            self.queue.put(("log", f"[warn] could not reach the model server at "
+                            f"{self.config.llm_base_url}: {exc}"))
             return
         self.queue.put(("models", models))
 
@@ -253,9 +254,11 @@ class MatcherWindow:
     def _set_models(self, models: list[str]) -> None:
         self.model_box.configure(values=models)
         if models and self.model_var.get() not in models:
-            self.model_var.set(models[0])
+            from .cli import pick_default_model
+
+            self.model_var.set(pick_default_model(models, self.config.llm_model))
         if models:
-            self._append(f"LM Studio models: {', '.join(models)}")
+            self._append(f"Models on server: {', '.join(models)}")
 
     def _finish(self, report: Path) -> None:
         self.last_report = report

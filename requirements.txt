@@ -1,5 +1,5 @@
 # Core dependencies for resume_matcher scaffolding
-openai>=1.40.0        # OpenAI-compatible client, used to talk to LM Studio's local server
+openai>=1.40.0        # OpenAI-compatible client, used to talk to Unsloth Desktop's local server
 pymupdf>=1.24.0       # PDF text extraction
 python-docx>=1.1.0    # .docx text extraction
 pytesseract>=0.3.10   # OCR for scanned/image resumes

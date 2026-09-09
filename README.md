@@ -1,9 +1,9 @@
 # resume_matcher
 
 Scaffolding for a local, private resume-to-job matcher. It scores every resume in a
-folder against each job posting using a local Gemma model
-(`google/gemma-4-12b-qat`) served by [LM Studio](https://lmstudio.ai/), then
-reports the top 5 matches per job.
+folder against each job posting using a local Gemma 4 model served by
+[Unsloth Desktop](https://unsloth.ai/), then reports the top 5 matches per
+job. Everything runs on your own machine; nothing leaves it.
 
 ## Workflow
 
@@ -22,10 +22,28 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Then in LM Studio:
+Then in Unsloth Desktop:
 
-1. Download and load `google/gemma-4-12b-qat`.
-2. Start the local server (default `http://localhost:1234/v1`).
+1. Download one of the supported Gemma 4 QAT models (pick by the memory you
+   have - VRAM, or RAM if running on CPU):
+
+   | Model | Needs roughly | When to pick it |
+   | --- | --- | --- |
+   | `gemma-4-e4b-it-qat` | ~6 GB | Small GPUs (6-8 GB) or CPU-only. Fastest; least discerning. |
+   | `gemma-4-12b-it-qat` | ~12 GB | The default. Ranks the bundled examples correctly. |
+   | `gemma-4-26b-a4b-it-qat` | ~24 GB | Best quality. Mixture-of-experts with ~4B active, so it still decodes quickly once loaded. |
+
+   The sizes are approximate and include room for the context length the tool
+   needs (see *Throughput* below). If a model fails to load or falls back to
+   CPU, step down one row.
+2. Load the model and start Unsloth Desktop's local server.
+3. Check the server address it shows. The tool assumes
+   `http://localhost:8888/v1`; if yours differs, set `RM_LLM_BASE_URL` (or
+   pass `--base-url`) to that address **including the `/v1` suffix**.
+
+The tool preselects whichever loaded model's id contains the configured name
+(`gemma-4-12b` by default, `RM_LLM_MODEL` to change), so the exact id the
+server reports does not need to be typed in.
 
 Note: `.doc` (legacy Word) files additionally need `antiword` or LibreOffice
 installed; `.pdf` and `.docx` work out of the box.
@@ -54,7 +72,7 @@ native Windows styling.)*
   opens a file browser instead.
 - **"Run all jobs in jobs/ folder"** does the regular matching over every
   posting in `jobs/`.
-- Pick the model from the dropdown (populated from LM Studio), watch progress
+- Pick the model from the dropdown (populated from the server), watch progress
   and log output live, and the HTML report opens automatically when finished.
 
 On Windows the launcher starts the app with `pythonw`, so you get just the
@@ -106,12 +124,12 @@ vision-capable model. Either way the extracted text is scored in a fresh
 call, like any other resume; with neither option available, image-based
 resumes are skipped with a note.
 
-Before matching starts, the tool queries LM Studio for the loaded models and
+Before matching starts, the tool queries the server for the loaded models and
 asks you to pick one (auto-selected when only one is loaded, or when running
 non-interactively). Pass `--model NAME` to skip the picker.
 
 Options: `--top N` (default 5), `--model NAME`, `--base-url URL`. Environment
-variables `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL` are also honored (see
+variables `RM_LLM_BASE_URL`, `RM_LLM_MODEL` are also honored (see
 `resume_matcher/config.py`).
 
 ## Throughput (concurrent scoring)
@@ -130,22 +148,22 @@ Set it with `-j` / `--concurrency` (default 4, `1` for sequential), or the
 python -m resume_matcher -j 4
 ```
 
-**Matching settings in LM Studio** (Load tab; reload the model to apply):
+**Matching settings in Unsloth Desktop** (in the model/server settings;
+reload the model after changing them). The exact labels may differ, but the
+two that matter are:
 
-- **Max Concurrent Predictions** - must be >= your `-j` value, or the extra
-  requests just queue on the server and you gain nothing. Set both to 4 to
-  start.
-- **Context Length** - llama.cpp-based servers divide the context across
+- **Parallel requests / concurrent slots** - must be >= your `-j` value (4),
+  or the extra requests just queue on the server and you gain nothing.
+- **Context length** - llama.cpp-based servers divide the context across
   concurrent slots, so the per-request budget is roughly
-  `context length / Max Concurrent Predictions`. A job + resume + reply needs
-  ~3-4k tokens, so for 4 slots set the context to **16384**. If replies start
-  coming back empty or truncated after raising concurrency, this is the cause:
-  raise the context or lower `-j`.
-- **GPU Offload** - put as many layers on the GPU as fit. Batching wins come
-  from the GPU decoding several sequences at once; a mostly-CPU model is
-  memory-bandwidth-bound and gains much less.
-- Leave **Flash Attention** and **Offload KV Cache to GPU** on - both help the
-  larger context that concurrency needs.
+  `context length / parallel slots`. A job + resume + reply needs ~3-4k
+  tokens, so for 4 slots set the context to **16384**. If replies start coming
+  back empty or truncated after raising concurrency, this is the cause: raise
+  the context or lower `-j`.
+
+Also put as many layers on the GPU as fit: batching wins come from the GPU
+decoding several sequences at once, and a mostly-CPU model gains much less.
+If the server offers flash attention or GPU KV-cache options, leave them on.
 
 Note that resumes are scored concurrently *within* a job, while jobs are
 processed one after another, so a run with many jobs and few resumes will not
@@ -157,7 +175,7 @@ To decide between models (say a smaller, faster one vs a larger one), run both
 over the same data and compare side by side:
 
 ```bash
-python -m resume_matcher.compare --test-mode google/gemma-4-12b-qat google/gemma-4-e4b
+python -m resume_matcher.compare --test-mode gemma-4-12b-it-qat gemma-4-e4b-it-qat
 ```
 
 It scores every resume against every job with each model in turn, then writes
@@ -204,7 +222,7 @@ or the matching `RM_*` environment variables):
 | `resume_matcher/outlook.py` | Read/send mail via the Windows Outlook desktop app (COM) |
 | `resume_matcher/email_watch.py` | Poll the inbox, match each job email, reply with results |
 | `resume_matcher/documents.py` | Extract text from PDF/DOCX/DOC resumes |
-| `resume_matcher/llm_client.py` | Talk to LM Studio's OpenAI-compatible server |
+| `resume_matcher/llm_client.py` | Talk to Unsloth Desktop's OpenAI-compatible server |
 | `resume_matcher/scoring.py` | Match prompt + robust parsing of the model's score/comment |
 | `resume_matcher/matcher.py` | Loop jobs × resumes, sort, keep top N |
 | `resume_matcher/report.py` | Print top matches and save HTML/text/JSON reports |

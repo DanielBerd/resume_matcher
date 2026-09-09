@@ -96,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--interval", type=int, default=None, help="Seconds between inbox polls")
     parser.add_argument("--subject-filter", default=None, help="Only process emails with this subject text")
     parser.add_argument("--to", default=None, help="Send all results here instead of replying to the sender")
-    parser.add_argument("--model", default=None, help="Model name as loaded in LM Studio")
+    parser.add_argument("--model", default=None, help="Model id as reported by the server")
     args = parser.parse_args(argv)
 
     from pathlib import Path
