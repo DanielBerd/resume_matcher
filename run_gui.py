@@ -3,7 +3,7 @@
 
 The only thing that needs to be installed beforehand is Python itself. On
 first run this creates a private environment next to the code and installs
-the dependencies into it, showing progress in a small window; afterwards it
+the dependencies into it, showing a simple progress window; afterwards it
 just opens the app. Started by ``run_gui.bat`` through ``pythonw`` on
 Windows, so there is no console - problems are reported in a dialog.
 """
@@ -60,7 +60,7 @@ def run_app() -> int:
 
 
 def setup_then_launch() -> int:
-    """Outside the venv: prepare it with visible progress, then relaunch."""
+    """Outside the venv: prepare it with a simple progress window, then relaunch."""
     import bootstrap
 
     problem = bootstrap.python_ok()
@@ -73,61 +73,102 @@ def setup_then_launch() -> int:
         bootstrap.relaunch(Path(__file__), sys.argv[1:], windowless=True, wait=False)
         return 0
 
+    log_path = ROOT / "setup.log"
+    log_file = open(log_path, "w", encoding="utf-8")
+
     try:
         import tkinter as tk
         from tkinter import ttk
     except ImportError:
         # No window possible: do it in the console instead.
         try:
-            bootstrap.ensure_ready(print)
+            bootstrap.ensure_ready(lambda line: (print(line), log_file.write(line + "\n")))
         except RuntimeError as exc:
             print(exc)
             return 1
+        finally:
+            log_file.close()
         return bootstrap.relaunch(Path(__file__), sys.argv[1:])
 
     root = tk.Tk()
-    root.title(f"{TITLE} - first-time setup")
-    root.geometry("560x340")
-    ttk.Label(root, text="Setting things up. This only happens once.",
-              font=("", 11, "bold")).pack(anchor="w", padx=14, pady=(12, 2))
-    ttk.Label(root, text="Creating a private Python environment and installing dependencies.",
-              foreground="gray").pack(anchor="w", padx=14)
-    bar = ttk.Progressbar(root, mode="indeterminate")
-    bar.pack(fill="x", padx=14, pady=8)
-    bar.start(12)
-    log = tk.Text(root, height=10, wrap="word", state="disabled", bg="#1e1e1e", fg="#d4d4d4",
-                  font=("Consolas" if sys.platform == "win32" else "monospace", 9))
-    log.pack(fill="both", expand=True, padx=14, pady=(0, 12))
+    root.title(TITLE)
+    root.resizable(False, False)
+    frame = ttk.Frame(root, padding=(24, 20, 24, 18))
+    frame.pack(fill="both", expand=True)
+    ttk.Label(frame, text="Setting up Resume Matcher", font=("", 12, "bold")).pack(anchor="w")
+    ttk.Label(frame, text="This only happens the first time and takes a minute or two.",
+              foreground="gray").pack(anchor="w", pady=(2, 12))
+    bar = ttk.Progressbar(frame, mode="determinate", maximum=100, length=400)
+    bar.pack(fill="x")
+    status = ttk.Label(frame, text="Preparing ...", foreground="gray")
+    status.pack(anchor="w", pady=(6, 0))
+    root.update_idletasks()
+    x = (root.winfo_screenwidth() - root.winfo_reqwidth()) // 2
+    y = (root.winfo_screenheight() - root.winfo_reqheight()) // 3
+    root.geometry(f"+{x}+{y}")
+
+    state = {"target": 3.0, "value": 0.0, "stage": "Preparing ..."}
     outcome: dict = {}
 
-    def append(line: str) -> None:
-        def _do():
-            log.configure(state="normal")
-            log.insert("end", line + "\n")
-            log.see("end")
-            log.configure(state="disabled")
-        root.after(0, _do)
+    def on_line(line: str) -> None:
+        """Turn bootstrap/pip output into a stage name and a progress target."""
+        log_file.write(line + "\n")
+        text = line.strip()
+        if text.startswith("First-time setup"):
+            stage, target = "Creating a private Python environment ...", 15
+        elif text.startswith("Installing dependencies"):
+            stage, target = "Downloading packages ...", 22
+        elif text.startswith(("Collecting", "Downloading", "Using cached")):
+            stage, target = "Downloading packages ...", min(70, state["target"] + 1.2)
+        elif text.startswith("Installing collected packages"):
+            stage, target = "Installing packages ...", 88
+        elif text.startswith("Dependencies installed"):
+            stage, target = "Almost done ...", 96
+        elif text.startswith("Starting the app"):
+            stage, target = "Starting the app ...", 100
+        else:
+            return
+        state["stage"], state["target"] = stage, max(state["target"], target)
+
+    def animate() -> None:
+        """Main-thread tick: advances the bar and notices when the worker is done,
+        so the worker never has to touch Tk from its own thread."""
+        if state["value"] < state["target"]:
+            state["value"] = min(state["target"], state["value"] + 0.6)
+            bar["value"] = state["value"]
+        status.configure(text=state["stage"])
+        if outcome:
+            finish()
+        else:
+            root.after(40, animate)
 
     def work() -> None:
         try:
-            bootstrap.ensure_ready(append)
-            append("Starting the app ...")
+            bootstrap.ensure_ready(on_line)
+            on_line("Starting the app ...")
             outcome["ok"] = True
         except Exception as exc:
             outcome["error"] = str(exc)
-        root.after(0, finish)
+        finally:
+            log_file.close()
 
     def finish() -> None:
-        bar.stop()
         if outcome.get("ok"):
+            bar["value"] = 100
+            status.configure(text="Starting the app ...")
             bootstrap.relaunch(Path(__file__), sys.argv[1:], windowless=True, wait=False)
-            root.after(400, root.destroy)
-        else:
-            append("")
-            append("Setup failed: " + outcome.get("error", "unknown error"))
-            ttk.Button(root, text="Close", command=root.destroy).pack(pady=(0, 10))
+            root.after(600, root.destroy)
+            return
+        bar.pack_forget()
+        status.configure(
+            text="Setup could not finish.\n\n" + outcome.get("error", "unknown error")
+            + f"\n\nThe full record is in {log_path.name} next to run_gui.py.",
+            foreground="#b42318", wraplength=420, justify="left",
+        )
+        ttk.Button(frame, text="Close", command=root.destroy).pack(anchor="e", pady=(14, 0))
 
     threading.Thread(target=work, daemon=True).start()
+    animate()
     root.mainloop()
     return 0 if outcome.get("ok") else 1
 

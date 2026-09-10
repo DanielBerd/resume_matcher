@@ -11,3 +11,5 @@ jobs/*
 results/
 # Server settings written by the GUI; may contain an API key
 settings.json
+# First-run install record written by the launchers
+setup.log

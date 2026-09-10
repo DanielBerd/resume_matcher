@@ -101,8 +101,8 @@ def ensure_ready(log=print, venv: Path = VENV, requirements: Path = REQUIREMENTS
                 log("  " + line)
         if proc.wait() != 0:
             raise RuntimeError(
-                "Installing dependencies failed (see the messages above).\n"
-                "Check your internet connection and try again, or install by hand:\n"
+                "Installing dependencies failed. Check your internet connection and "
+                "try again, or install by hand:\n"
                 f"    {py} -m pip install -r requirements.txt"
             )
         stamp.write_text(requirements_hash(requirements) + "\n")
