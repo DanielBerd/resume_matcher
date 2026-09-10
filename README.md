@@ -20,9 +20,9 @@ job. Everything runs on your own machine; nothing leaves it.
 You need two things installed: **Python 3.10 or newer** (from
 [python.org](https://www.python.org/downloads/); on Windows tick *Add Python to
 PATH*) and **Unsloth Desktop** with a model loaded. That's it - no `pip`, no
-virtual environments. The first time you run a launcher it creates a private
-environment next to the code and installs everything into it, showing progress
-in a small window (a minute or two); after that it opens straight away.
+virtual environments. The first time you start it, it creates a private
+environment inside the `app/` folder and installs everything into it, showing a
+progress bar (a minute or two); after that it opens straight away.
 
 In Unsloth Desktop:
 
@@ -53,11 +53,10 @@ installed; `.pdf` and `.docx` work out of the box.
 
 ## Usage
 
-Put your resumes in `resumes/`, then double-click **`run_gui.pyw`** (Windows;
-`run_gui.bat` also works but blinks a console for a moment) or run
-`python run_gui.py` (macOS / Linux). A window opens:
+Put your resumes in `resumes/`, then double-click **`ResumeMatcher.pyw`**
+(Windows) or run `python ResumeMatcher.pyw` (macOS / Linux). A window opens:
 
-![The Resume Matcher window](docs/gui_window.png)
+![The Resume Matcher window](app/docs/gui_window.png)
 
 *(Captured on Linux; on Windows the layout is the same but the controls use
 native Windows styling.)*
@@ -70,9 +69,10 @@ native Windows styling.)*
 - Pick the model from the dropdown (populated from the server), watch progress
   and log output live, and the HTML report opens automatically when finished.
 
-On Windows the launcher starts the app with `pythonw`, so you get just the
-window with no console behind it; if it cannot start, the reason appears in a
-dialog box.
+On Windows a `.pyw` file runs with no console window at all; if it cannot
+start, the reason appears in a dialog box. Should double-clicking open the file
+in an editor instead of running it, use `app\run_gui.bat` (which blinks a
+console for a moment) or right-click it and choose *Open with -> Python*.
 
 #### Server tab: local server or hosted API
 
@@ -89,8 +89,8 @@ fill in:
   provider.** Use it knowingly - resumes are personal data.
 
 *Test connection* checks the address and key. *Save* writes the tab to
-`settings.json` next to the launchers; every run also saves it, so what you
-see is what runs. The file is gitignored because it can contain an API key.
+`app/settings.json`; every run also saves it, so what you see is what runs.
+The file is gitignored because it can contain an API key.
 
 If the window cannot reach the model server, the *Server* tab gets a red dot
 and the line at the top of the *Match* tab turns red; clicking it takes you to
@@ -110,27 +110,32 @@ The window itself needs tkinter, which ships with Python on Windows and macOS
 
 ### Console launcher
 
-`run_matcher.bat` / `run_matcher.py` does the same as the window's *Run all
-jobs* button without a window: it scores everything in `jobs/`, opens the HTML
-report, and keeps the console open so you can read any messages. It sets up
-the environment on first run just like the window does.
+`app/run_matcher.bat` / `app/run_matcher.py` does the same as the window's
+*Run all jobs* button without a window: it scores everything in `jobs/`, opens
+the HTML report, and keeps the console open so you can read any messages. It
+sets up the environment on first run just like the window does.
 
 ### Command line
 
-For flags and test mode, use the module form from inside the environment the
-launchers created (`.venv/Scripts/python` on Windows, `.venv/bin/python`
-elsewhere), or your own if you prefer to manage it yourself:
+Everything technical lives in `app/`. For flags and test mode, use the module
+form from inside the environment the launchers created
+(`app\.venv\Scripts\python` on Windows, `app/.venv/bin/python` elsewhere), or
+your own if you prefer to manage it yourself:
 
 ```bash
-.venv/bin/python -m resume_matcher --jobs jobs/ --resumes resumes/
+cd app
+.venv/bin/python -m resume_matcher --jobs ../jobs --resumes ../resumes
 ```
+
+Paths default to the project's `resumes/`, `jobs/`, and `results/` folders
+regardless of the current directory.
 
 By default the tool reads real inputs from `jobs/` and `resumes/`. To try the
 pipeline without any real data, run in test mode, which uses the bundled
-sample job postings and resumes in `examples/`:
+sample job postings and resumes in `app/examples/`:
 
 ```bash
-python -m resume_matcher --test-mode
+.venv/bin/python -m resume_matcher --test-mode
 ```
 
 The examples include five job postings (one as a saved `.eml` email) and five
@@ -181,7 +186,7 @@ Set it with `-j` / `--concurrency` (default 4, `1` for sequential), or the
 `RM_CONCURRENCY` environment variable:
 
 ```bash
-python -m resume_matcher -j 4
+.venv/bin/python -m resume_matcher -j 4
 ```
 
 **Matching settings in Unsloth Desktop** (in the model/server settings;
@@ -211,7 +216,7 @@ To decide between models (say a smaller, faster one vs a larger one), run both
 over the same data and compare side by side:
 
 ```bash
-python -m resume_matcher.compare --test-mode gemma-4-12b-it-qat gemma-4-e4b-it-qat
+.venv/bin/python -m resume_matcher.compare --test-mode gemma-4-12b-it-qat gemma-4-e4b-it-qat
 ```
 
 It scores every resume against every job with each model in turn, then writes
@@ -227,8 +232,8 @@ inbox: when a job email arrives it scores every resume against it and emails
 the ranked results back to your own mailbox (the account being watched), so
 the matches land in the same inbox.
 
-Start it by double-clicking **`watch_inbox.bat`** (Windows) or running
-`python watch_inbox.py`. It polls the inbox on an interval and keeps running
+Start it by double-clicking **`app\watch_inbox.bat`** (Windows) or running
+`python app/watch_inbox.py`. It polls the inbox on an interval and keeps running
 until you close the window.
 
 **Requirements and limits** — this uses the *classic* Outlook desktop app
@@ -240,7 +245,7 @@ passwords or setup:
   newer "Outlook for Windows" app does not expose COM automation.
 - Needs `pywin32`, installed automatically on Windows by `requirements.txt`.
 
-Useful settings (flags to `watch_inbox.py` / `python -m resume_matcher.email_watch`,
+Useful settings (flags to `app/watch_inbox.py` / `python -m resume_matcher.email_watch`,
 or the matching `RM_*` environment variables):
 
 - `--subject-filter TEXT` — only process unread emails whose subject contains
@@ -252,29 +257,39 @@ or the matching `RM_*` environment variables):
 
 ## Project layout
 
-| Module | Responsibility |
+The root holds only what a user touches; everything technical is in `app/`.
+
+| Path | What it is |
 | --- | --- |
-| `resume_matcher/email_ingest.py` | Load job postings from `jobs/` folder; IMAP fetch stub |
-| `resume_matcher/outlook.py` | Read/send mail via the Windows Outlook desktop app (COM) |
-| `resume_matcher/email_watch.py` | Poll the inbox, match each job email, reply with results |
-| `resume_matcher/documents.py` | Extract text from PDF/DOCX/DOC resumes |
-| `resume_matcher/llm_client.py` | Talk to Unsloth Desktop's OpenAI-compatible server |
-| `resume_matcher/scoring.py` | Match prompt + robust parsing of the model's score/comment |
-| `resume_matcher/matcher.py` | Loop jobs × resumes, sort, keep top N |
-| `resume_matcher/report.py` | Print top matches and save HTML/text/JSON reports |
-| `resume_matcher/compare.py` | Score the set with multiple models and report them side by side |
-| `resume_matcher/cli.py` | Command-line entry point |
-| `resume_matcher/gui.py` | Desktop window: Match tab (drag-and-drop / run folder) and Server tab |
-| `resume_matcher/providers.py` | Presets for the Server tab (local servers and hosted APIs) |
-| `bootstrap.py` | First-run setup shared by the launchers: create `.venv`, install requirements, relaunch |
-| `run_matcher.py` | Double-click launcher (runs the tool, opens the report) |
-| `run_matcher.bat` | Windows double-click launcher (finds Python, runs `run_matcher.py`) |
-| `watch_inbox.py` / `.bat` | Launchers for the Outlook inbox watcher |
-| `run_gui.py` / `.pyw` / `.bat` | Launchers for the desktop window (`.pyw`: no console at all on Windows) |
+| `ResumeMatcher.pyw` | The launcher - double-click to start |
+| `resumes/`, `jobs/` | Your resumes and saved job postings |
+| `results/` | Reports from each run (created on first run) |
+| `app/run_gui.py`, `run_gui.bat` | What the launcher runs; the `.bat` is a fallback |
+| `app/run_matcher.py` / `.bat` | Console launcher: run all jobs, open the report |
+| `app/watch_inbox.py` / `.bat` | Launchers for the Outlook inbox watcher |
+| `app/bootstrap.py` | First-run setup: create `.venv`, install requirements, relaunch |
+| `app/requirements.txt` | Dependencies, installed automatically on first run |
+| `app/.venv/`, `settings.json`, `setup.log` | Created on first run (not in git) |
+| `app/examples/` | Sample jobs and resumes for `--test-mode` |
+| `app/tests/` | Test suite |
+| `app/resume_matcher/email_ingest.py` | Load job postings from `jobs/` folder; single-file loader for the GUI |
+| `app/resume_matcher/outlook.py` | Read/send mail via the Windows Outlook desktop app (COM) |
+| `app/resume_matcher/email_watch.py` | Poll the inbox, match each job email, reply with results |
+| `app/resume_matcher/documents.py` | Extract text from PDF/DOCX/DOC resumes; OCR for scans |
+| `app/resume_matcher/llm_client.py` | Talk to the model server's OpenAI-compatible API |
+| `app/resume_matcher/providers.py` | Presets for the Server tab; model-id matching |
+| `app/resume_matcher/scoring.py` | Match prompt + robust parsing of the model's score/comment |
+| `app/resume_matcher/matcher.py` | Score jobs x resumes concurrently, keep top N |
+| `app/resume_matcher/report.py` | Print top matches and save HTML/text/JSON reports |
+| `app/resume_matcher/compare.py` | Score the set with multiple models and report side by side |
+| `app/resume_matcher/cli.py` | Command-line entry point |
+| `app/resume_matcher/gui.py` | Desktop window: Match tab and Server tab |
+| `app/resume_matcher/config.py` | Settings, layered from defaults, `settings.json`, env, flags |
 
 ## Tests
 
 ```bash
+cd app
 .venv/bin/python -m pip install pytest
 .venv/bin/python -m pytest
 ```

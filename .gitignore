@@ -1,15 +1,14 @@
-__pycache__/
-*.pyc
-.venv/
-.pytest_cache/
-# Keep real resumes and job emails out of git (bundled samples live in examples/)
+# Your own files stay out of git (bundled samples live in app/examples/)
 resumes/*
 !resumes/.gitkeep
 jobs/*
 !jobs/.gitkeep
-# Run results stay local
+# Generated reports
 results/
-# Server settings written by the GUI; may contain an API key
-settings.json
-# First-run install record written by the launchers
-setup.log
+# Created by the launchers on first run; settings.json may hold an API key
+app/.venv/
+app/settings.json
+app/setup.log
+__pycache__/
+*.pyc
+.pytest_cache/

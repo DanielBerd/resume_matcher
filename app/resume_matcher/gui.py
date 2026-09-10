@@ -7,7 +7,7 @@ Two tabs:
     resume_matcher`.
   * Server - where the model runs: a local server (Unsloth Desktop) or a
     hosted API, with base URL, key, model, and concurrency. Saved to
-    settings.json next to the launchers (gitignored, since it may hold a key).
+    app/settings.json (gitignored, since it may hold a key).
 
 Real drag-and-drop needs the optional ``tkinterdnd2`` package; without it the
 drop zone still works as a click-to-browse button.
@@ -242,8 +242,8 @@ class MatcherWindow:
         self.server_status.grid(row=row, column=0, columnspan=3, sticky="w", pady=(6, 0))
         row += 1
 
-        ttk.Label(form, text=f"Settings are saved to {SETTINGS_PATH.name} next to the launchers "
-                             "(kept out of git). Runs use the values shown here.",
+        ttk.Label(form, text=f"Settings are saved to app/{SETTINGS_PATH.name} (kept out of git). "
+                             "Runs use the values shown here.",
                   foreground="gray", wraplength=560, justify="left"
                   ).grid(row=row, column=0, columnspan=3, sticky="w", pady=(12, 0))
         self._on_mode()

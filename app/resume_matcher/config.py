@@ -2,7 +2,7 @@
 
 Precedence, lowest to highest:
   1. the defaults below
-  2. settings.json next to the launchers (written by the GUI's Server tab;
+  2. app/settings.json (written by the GUI's Server tab;
      gitignored because it can hold an API key)
   3. RM_* environment variables
   4. command-line flags (applied by the entry points)
@@ -19,8 +19,13 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# Lives beside run_gui.py / run_matcher.py so double-click users can find it.
-SETTINGS_PATH = Path(__file__).resolve().parent.parent / "settings.json"
+# Folder layout, anchored to this file so nothing depends on the current
+# working directory (double-click launchers start anywhere):
+#   <project>/ResumeMatcher.pyw, README.md, resumes/, jobs/, results/
+#   <project>/app/                 code, launchers, .venv, settings.json
+APP_DIR = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = APP_DIR.parent
+SETTINGS_PATH = APP_DIR / "settings.json"
 
 # Fields the GUI's Server tab manages and settings.json persists. Kept to a
 # whitelist so the file never grows stale copies of unrelated settings.
@@ -88,10 +93,10 @@ class Config:
     ocr: bool = False
 
     # --- Input locations ---
-    resumes_dir: Path = field(default_factory=lambda: Path("resumes"))
+    resumes_dir: Path = field(default_factory=lambda: PROJECT_ROOT / "resumes")
     # Job postings saved from email (.txt or .eml). For live inbox watching
     # instead of a folder, see email_watch.py.
-    jobs_dir: Path = field(default_factory=lambda: Path("jobs"))
+    jobs_dir: Path = field(default_factory=lambda: PROJECT_ROOT / "jobs")
 
     # --- Matching ---
     top_n: int = 5
@@ -103,7 +108,7 @@ class Config:
 
     # --- Output ---
     # Run results (HTML, text, JSON) are written here; the folder is gitignored.
-    results_dir: Path = field(default_factory=lambda: Path("results"))
+    results_dir: Path = field(default_factory=lambda: PROJECT_ROOT / "results")
 
     # --- Outlook inbox watching (Windows desktop Outlook via COM) ---
     # See outlook.py / email_watch.py. Polls the inbox for unread job emails,

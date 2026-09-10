@@ -1,8 +1,8 @@
 @echo off
 REM Double-click launcher for the Resume Matcher window (Windows).
 REM Uses pythonw so only the app window appears - no console behind it.
-REM (A .bat always blinks a console for a moment; run_gui.pyw avoids even
-REM that, if .pyw files are associated with Python on this computer.)
+REM Fallback for when double-clicking ResumeMatcher.pyw (one folder up) does
+REM not run it; a .bat always blinks a console for a moment.
 REM Any startup problem is reported in a dialog box by run_gui.py.
 
 cd /d "%~dp0"

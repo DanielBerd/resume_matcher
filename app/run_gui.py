@@ -2,7 +2,7 @@
 """Double-click launcher for the Resume Matcher window.
 
 The only thing that needs to be installed beforehand is Python itself. On
-first run this creates a private environment next to the code and installs
+first run this creates a private environment in this app/ folder and installs
 the dependencies into it, showing a simple progress window; afterwards it
 just opens the app. Started by ``run_gui.bat`` through ``pythonw`` on
 Windows, so there is no console - problems are reported in a dialog.
@@ -53,8 +53,8 @@ def run_app() -> int:
                   "On Windows, re-run the Python installer and enable 'tcl/tk and IDLE'.\n"
                   "On Linux, install it with:  sudo apt install python3-tk")
         else:
-            alert(f"Missing dependency: {exc.name}\n\nDelete the .venv folder next to "
-                  "run_gui.py and start it again to reinstall.")
+            alert(f"Missing dependency: {exc.name}\n\nDelete the app/.venv folder and "
+                  "start it again to reinstall.")
         return 1
     return gui_main()
 
@@ -162,7 +162,7 @@ def setup_then_launch() -> int:
         bar.pack_forget()
         status.configure(
             text="Setup could not finish.\n\n" + outcome.get("error", "unknown error")
-            + f"\n\nThe full record is in {log_path.name} next to run_gui.py.",
+            + f"\n\nThe full record is in app/{log_path.name}.",
             foreground="#b42318", wraplength=420, justify="left",
         )
         ttk.Button(frame, text="Close", command=root.destroy).pack(anchor="e", pady=(14, 0))
