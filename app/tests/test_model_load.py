@@ -67,7 +67,7 @@ def test_probe_uses_load_timeout_by_default(monkeypatch):
             seen["model"] = kw["model"]
 
     class FakeClient:
-        def __init__(self, base_url, api_key, timeout):
+        def __init__(self, base_url, api_key, timeout, **kw):
             seen["timeout"] = timeout
             self.chat = type("Chat", (), {"completions": FakeCompletions()})()
 

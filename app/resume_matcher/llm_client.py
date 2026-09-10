@@ -10,7 +10,7 @@ import base64
 import mimetypes
 import time
 
-from openai import OpenAI
+from openai import APIConnectionError, APITimeoutError, OpenAI
 
 from .config import Config
 
@@ -34,11 +34,49 @@ TRANSCRIBE_PROMPT = (
 class LocalLLM:
     def __init__(self, config: Config):
         self.config = config
+        # max_retries=0: the SDK would otherwise silently resend a request
+        # that timed out or got a 5xx. On a local server that duplicates work
+        # (the server still finishes the original, whose reply is then
+        # ignored). Retrying is done here instead, only when it is safe.
         self.client = OpenAI(
             base_url=config.llm_base_url,
             api_key=config.llm_api_key,
             timeout=config.llm_timeout,
+            max_retries=0,
         )
+
+    def _call(self, request, what: str):
+        """Run one API request with a retry policy that cannot duplicate work.
+
+        * 429/503 ("busy", request not accepted): retry with backoff for up
+          to llm_busy_wait seconds - the usual case when more requests are in
+          flight than the server has parallel slots.
+        * A connection error (nothing reached the server): retry once.
+        * A timeout: never retry; the server may still be working on it.
+          Reported with a hint about queueing.
+        * Anything else (bad request, auth, ...): raised as is.
+        """
+        delay, waited, reconnects = 1.0, 0.0, 0
+        while True:
+            try:
+                return request()
+            except APITimeoutError:
+                raise RuntimeError(
+                    f"{what} timed out after {self.config.llm_timeout:.0f}s. With "
+                    f"{self.config.concurrency} requests in flight the server may be queueing "
+                    "them; lower the concurrency (-j) or raise the server's parallel slots."
+                ) from None
+            except APIConnectionError:
+                if reconnects >= 1:
+                    raise
+                reconnects += 1
+            except Exception as exc:
+                status = getattr(exc, "status_code", None)
+                if status not in (429, 503) or waited >= self.config.llm_busy_wait:
+                    raise
+            time.sleep(delay)
+            waited += delay
+            delay = min(delay * 2, 10.0)
 
     def ensure_loaded(self, log=print) -> str:
         """Load the configured model on the server if it is not already loaded."""
@@ -46,14 +84,17 @@ class LocalLLM:
 
     def complete(self, system_prompt: str, user_prompt: str) -> str:
         """Send a single chat completion request and return the text reply."""
-        response = self.client.chat.completions.create(
-            model=self.config.llm_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=self.config.llm_temperature,
-            max_tokens=self.config.llm_max_tokens,
+        response = self._call(
+            lambda: self.client.chat.completions.create(
+                model=self.config.llm_model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=self.config.llm_temperature,
+                max_tokens=self.config.llm_max_tokens,
+            ),
+            "Scoring request",
         )
         choice = response.choices[0]
         content = choice.message.content or ""
@@ -82,19 +123,22 @@ class LocalLLM:
         other resumes.
         """
         data_url = f"data:{mime_type};base64,{base64.b64encode(image).decode()}"
-        response = self.client.chat.completions.create(
-            model=self.config.llm_model,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": TRANSCRIBE_PROMPT},
-                        {"type": "image_url", "image_url": {"url": data_url}},
-                    ],
-                }
-            ],
-            temperature=0.0,
-            max_tokens=self.config.llm_max_tokens,
+        response = self._call(
+            lambda: self.client.chat.completions.create(
+                model=self.config.llm_model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": TRANSCRIBE_PROMPT},
+                            {"type": "image_url", "image_url": {"url": data_url}},
+                        ],
+                    }
+                ],
+                temperature=0.0,
+                max_tokens=self.config.llm_max_tokens,
+            ),
+            "Transcription request",
         )
         return response.choices[0].message.content or ""
 
@@ -110,7 +154,7 @@ def probe_model(config: Config, timeout: float | None = None) -> None:
     enabled, the server may hold this very request while it loads the model.
     """
     timeout = config.llm_load_timeout if timeout is None else timeout
-    client = OpenAI(base_url=config.llm_base_url, api_key=config.llm_api_key, timeout=timeout)
+    client = OpenAI(base_url=config.llm_base_url, api_key=config.llm_api_key, timeout=timeout, max_retries=0)
     client.chat.completions.create(
         model=config.llm_model,
         messages=[{"role": "user", "content": "ping"}],
@@ -157,7 +201,7 @@ def ensure_model_loaded(config: Config, log=print, wait: float = 15.0, poll: flo
 
 def list_models(config: Config) -> list[str]:
     """Return the model ids available on the local model server."""
-    client = OpenAI(base_url=config.llm_base_url, api_key=config.llm_api_key, timeout=10)
+    client = OpenAI(base_url=config.llm_base_url, api_key=config.llm_api_key, timeout=10, max_retries=0)
     return [model.id for model in client.models.list()]
 
 

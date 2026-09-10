@@ -44,6 +44,8 @@ ENV_VARS = {
     "llm_api_key": "RM_LLM_API_KEY",
     "llm_model": "RM_LLM_MODEL",
     "concurrency": "RM_CONCURRENCY",
+    "llm_timeout": "RM_LLM_TIMEOUT",
+    "llm_busy_wait": "RM_LLM_BUSY_WAIT",
     "outlook_subject_filter": "RM_SUBJECT_FILTER",
     "result_recipient": "RM_RESULT_TO",
     "poll_interval": "RM_POLL_INTERVAL",
@@ -79,9 +81,15 @@ class Config:
     # Generous budget: reasoning-tuned models emit thinking tokens before the
     # answer, and those count against this limit.
     llm_max_tokens: int = 2048
-    # Per-request timeout in seconds. Scoring calls are quick; transcription
-    # of image resumes can take minutes on partial GPU offload.
-    llm_timeout: float = 300.0
+    # Per-request timeout in seconds. Note that with `concurrency` requests in
+    # flight and a server with fewer parallel slots, a request may wait in the
+    # server's queue for (concurrency / slots) x one request's time before it
+    # even starts, so keep this generous. A timed-out request is never resent
+    # (the server would still finish the original and the work would double).
+    llm_timeout: float = 600.0
+    # When the server answers "busy" (HTTP 429/503 - the request was not
+    # processed), keep retrying with backoff for up to this many seconds.
+    llm_busy_wait: float = 120.0
     # How long to wait for the server to load a model on request (large
     # models take a while to come off disk).
     llm_load_timeout: float = 300.0

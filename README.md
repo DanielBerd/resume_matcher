@@ -217,6 +217,15 @@ Note that resumes are scored concurrently *within* a job, while jobs are
 processed one after another, so a run with many jobs and few resumes will not
 saturate a high `-j`.
 
+If the server has fewer parallel slots than `-j`, the extra requests wait in
+its queue; the tool retries a "busy" answer (HTTP 429/503) with backoff for
+up to two minutes, but a request that times out is **never resent** - the
+server would still finish the original and the work would double. The
+per-request timeout is 10 minutes (`RM_LLM_TIMEOUT` to change), which allows
+for that queueing; if you still see timeouts, lower `-j` or raise the
+server's slots. The OpenAI client's own automatic retries are switched off
+for the same reason.
+
 ## Comparing models
 
 To decide between models (say a smaller, faster one vs a larger one), run both
