@@ -216,6 +216,7 @@ class MatcherWindow:
         self.model_var = tk.StringVar(value=c.llm_model)
         self.model_box = ttk.Combobox(form, textvariable=self.model_var, state="normal")
         self.model_box.grid(row=row, column=1, sticky="ew", pady=4)
+        self.model_box.bind("<<ComboboxSelected>>", lambda _e: self._on_model_selected())
         ttk.Button(form, text="Fetch models", command=self._fetch_models).grid(row=row, column=2, padx=(8, 0))
         row += 1
 
@@ -324,6 +325,24 @@ class MatcherWindow:
             return
         self.queue.put(("models", models))
 
+    def _on_model_selected(self) -> None:
+        """Picking a model in the dropdown loads it on the server right away."""
+        self._apply_fields()
+        threading.Thread(target=self._load_model, daemon=True).start()
+
+    def _load_model(self) -> None:
+        try:
+            from .llm_client import ensure_model_loaded
+
+            state = ensure_model_loaded(
+                self.config, log=lambda text: self.queue.put(("server_status", (text, "gray")))
+            )
+        except Exception as exc:
+            self.queue.put(("server_error", f"Could not load {self.config.llm_model}: {exc}"))
+            return
+        verb = "is loaded and ready" if state == "ready" else "loaded"
+        self.queue.put(("server_status", (f"{self.config.llm_model} {verb}.", _OK)))
+
     def _refresh_summary(self) -> None:
         if self._server_alert:
             self.summary.configure(text=unreachable_text(self.config.llm_base_url),
@@ -398,6 +417,16 @@ class MatcherWindow:
                     msg = f"Cannot reach the model server at {host_of(config.llm_base_url)}: {exc}"
                     self.queue.put(("server_error", msg))
                     raise RuntimeError(msg) from exc
+                # Load the model if the server has none loaded, so a run does
+                # not fail once per resume with "No model loaded".
+                try:
+                    from .llm_client import ensure_model_loaded
+
+                    ensure_model_loaded(config)
+                except Exception as exc:
+                    msg = f"Model {config.llm_model} is not ready on the server: {exc}"
+                    self.queue.put(("server_error", msg))
+                    raise RuntimeError(msg) from exc
 
                 resumes = load_resumes(config.resumes_dir)
                 if not resumes:
@@ -446,6 +475,10 @@ class MatcherWindow:
                 self._set_status(f"Scoring {done}/{total}...")
         elif kind == "models":
             self._set_models(payload)
+        elif kind == "server_status":
+            text, color = payload
+            self._set_server_status(text, color)
+            self._append(text)
         elif kind == "server_error":
             self._set_server_status(payload, _ERR)
             self._append(f"[warn] {payload}")

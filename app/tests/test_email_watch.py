@@ -16,6 +16,9 @@ from resume_matcher.outlook import InboxJob
 class FakeLLM:
     """Returns a fixed score so match_job runs without a real model."""
 
+    def ensure_loaded(self, log=print):
+        return "ready"
+
     def complete(self, system_prompt, user_prompt):
         return '{"score": 77, "comment": "Solid overlap."}'
 

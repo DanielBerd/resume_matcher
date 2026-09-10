@@ -82,6 +82,9 @@ class Config:
     # Per-request timeout in seconds. Scoring calls are quick; transcription
     # of image resumes can take minutes on partial GPU offload.
     llm_timeout: float = 300.0
+    # How long to wait for the server to load a model on request (large
+    # models take a while to come off disk).
+    llm_load_timeout: float = 300.0
 
     # Print raw model replies and finish reasons for each scoring call.
     verbose: bool = False

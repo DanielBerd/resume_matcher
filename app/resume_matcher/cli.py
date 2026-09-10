@@ -14,7 +14,7 @@ from .config import Config
 from .documents import load_resumes
 from .email_ingest import load_jobs_from_folder
 from .matcher import run
-from .llm_client import list_models
+from .llm_client import ensure_model_loaded, list_models
 from .providers import pick_default_model  # noqa: F401  (re-exported for callers/tests)
 from .report import print_report, write_report
 
@@ -161,6 +161,11 @@ def main(argv: list[str] | None = None) -> int:
           f"{'  [hosted API - data leaves this machine]' if config.is_hosted else ''}")
     if config.concurrency > 1:
         print(f"Scoring up to {config.concurrency} resumes at a time.")
+    try:
+        ensure_model_loaded(config)
+    except Exception as exc:
+        print(f"error: model {config.llm_model} is not ready on the server: {exc}", file=sys.stderr)
+        return 1
 
     top_matches = run(config, jobs, resumes)
     print_report(top_matches)

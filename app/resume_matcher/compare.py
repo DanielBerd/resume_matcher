@@ -22,7 +22,7 @@ from pathlib import Path
 from .config import Config
 from .documents import Resume, load_resumes
 from .email_ingest import JobPosting, load_jobs_from_folder
-from .llm_client import LocalLLM
+from .llm_client import LocalLLM, ensure_model_loaded
 from .report import _score_class
 from .scoring import MatchResult, score_resume
 
@@ -51,7 +51,9 @@ class ModelRun:
 
 def run_model(config: Config, model: str, jobs: list[JobPosting], resumes: list[Resume]) -> ModelRun:
     """Score every resume against every job with one model, timing the whole run."""
-    llm = LocalLLM(config.with_model(model))
+    cfg = config.with_model(model)
+    ensure_model_loaded(cfg)  # each model in turn: the server may need to swap
+    llm = LocalLLM(cfg)
     run = ModelRun(model=model)
     total = len(jobs) * len(resumes)
     start = time.perf_counter()

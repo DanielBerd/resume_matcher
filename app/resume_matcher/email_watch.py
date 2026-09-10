@@ -32,6 +32,7 @@ def process_once(config: Config, mailbox, llm: LocalLLM, resumes: list) -> int:
     to_addr = config.result_recipient or mailbox.own_address()
     for job in jobs:
         print(f"\nNew job email: {job.posting.title} (from {job.sender_address})")
+        llm.ensure_loaded()  # servers unload idle models; reload if needed
         results = match_job(
             llm, job.posting, resumes, config.top_n, Progress(len(resumes)), config.concurrency
         )
