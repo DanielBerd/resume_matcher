@@ -48,13 +48,13 @@ The tool preselects whichever loaded model's id contains the configured name
 (`gemma-4-12b` by default, `RM_LLM_MODEL` to change), so the exact id the
 server reports does not need to be typed in.
 
-The server does not need the model loaded in advance: before a run (and when
-you pick a model on the Server tab) the tool checks whether the model answers,
-and if the server reports *No model loaded* it asks the server to load it
-(Unsloth Desktop's `POST /inference/load`) and waits until it is ready - large
-models take a minute to come off disk. Alternatively, turn on *Model
-auto-switch* under Unsloth Desktop's Settings > API and it loads models on
-request by itself.
+**Turn on Settings > API > "Switch model by request" in Unsloth Desktop.**
+With it on, the server loads whichever installed model a request names, so
+the tool can pick and switch models by itself; before a run (and when you
+pick a model on the Server tab) it sends a one-token request and waits for the
+model to come up - large models take a minute to come off disk. Without the
+setting, the model must be loaded in the app by hand first, and the tool says
+so (the app's own load endpoint is internal and cannot be called by clients).
 
 Note: `.doc` (legacy Word) files additionally need `antiword` or LibreOffice
 installed; `.pdf` and `.docx` work out of the box.

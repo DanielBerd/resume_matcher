@@ -340,7 +340,7 @@ class MatcherWindow:
         except Exception as exc:
             self.queue.put(("server_error", f"Could not load {self.config.llm_model}: {exc}"))
             return
-        verb = "is loaded and ready" if state == "ready" else "loaded"
+        verb = "is loaded and ready" if state == "ready" else "is now loaded"
         self.queue.put(("server_status", (f"{self.config.llm_model} {verb}.", _OK)))
 
     def _refresh_summary(self) -> None:

@@ -8,20 +8,21 @@ from __future__ import annotations
 
 import base64
 import mimetypes
-import json
-import re
 import time
-import urllib.error
-import urllib.request
 
 from openai import OpenAI
 
 from .config import Config
 
-# Unsloth Desktop answers every request with this when no model is loaded and
-# points at its own (non-OpenAI) load endpoint.
+# Unsloth Desktop answers every request with this while no model is loaded.
+# Its own load endpoint is internal to the app (JWT-protected), so a client
+# cannot load a model itself; with "Switch model by request" enabled the
+# server loads whatever model a request names.
 NOT_LOADED_HINT = "no model loaded"
-LOAD_PATH = "/inference/load"
+AUTO_SWITCH_HINT = (
+    "In Unsloth Desktop either load the model in the app, or turn on "
+    "Settings > API > \"Switch model by request\" so it loads models automatically."
+)
 
 TRANSCRIBE_PROMPT = (
     "Transcribe all text in this resume image to plain text. Preserve the "
@@ -102,14 +103,13 @@ def guess_mime_type(filename: str) -> str:
     return mimetypes.guess_type(filename)[0] or "image/png"
 
 
-def server_root(base_url: str) -> str:
-    """'http://localhost:8888/v1' -> 'http://localhost:8888' (the /inference/load
-    endpoint lives beside /v1, not under it)."""
-    return re.sub(r"/v\d+/?$", "", base_url.rstrip("/"))
+def probe_model(config: Config, timeout: float | None = None) -> None:
+    """One-token completion: raises if the server or model is not ready.
 
-
-def probe_model(config: Config, timeout: float = 30.0) -> None:
-    """One-token completion: raises if the server or model is not ready."""
+    The timeout defaults to the load timeout because, with model switching
+    enabled, the server may hold this very request while it loads the model.
+    """
+    timeout = config.llm_load_timeout if timeout is None else timeout
     client = OpenAI(base_url=config.llm_base_url, api_key=config.llm_api_key, timeout=timeout)
     client.chat.completions.create(
         model=config.llm_model,
@@ -120,65 +120,28 @@ def probe_model(config: Config, timeout: float = 30.0) -> None:
 
 
 def _looks_unloaded(exc: Exception) -> bool:
-    text = str(exc).lower()
-    return NOT_LOADED_HINT in text or LOAD_PATH in text
+    return NOT_LOADED_HINT in str(exc).lower()
 
 
-def _post_json(url: str, payload: dict, timeout: float) -> tuple[int, str]:
-    """POST a JSON body; returns (status, body text). HTTP errors are returned,
-    not raised; only connection failures raise (URLError)."""
-    data = json.dumps(payload).encode()
-    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status, resp.read().decode("utf-8", "replace")
-    except urllib.error.HTTPError as exc:
-        return exc.code, exc.read().decode("utf-8", "replace")
+def ensure_model_loaded(config: Config, log=print, wait: float = 15.0, poll: float = 3.0) -> str:
+    """Make sure the configured model answers, giving the server a chance to
+    load it on request.
 
-
-def request_model_load(config: Config, timeout: float) -> None:
-    """POST the server's load endpoint for the configured model.
-
-    The exact request shape is not documented, so the obvious field names are
-    tried in turn; the endpoint is tried beside /v1 first, then under it.
-    Raises RuntimeError with the server's reply when none is accepted.
+    Returns "ready" if it answered at once, "loaded" if it came up during the
+    short wait (a server that loads asynchronously). Raises a RuntimeError
+    naming the Unsloth setting to enable when the server refuses to load it,
+    and re-raises any other failure (bad key, unreachable server, ...).
     """
-    urls = [server_root(config.llm_base_url) + LOAD_PATH, config.llm_base_url.rstrip("/") + LOAD_PATH]
-    payloads = [{"model": config.llm_model}, {"model_id": config.llm_model}, {"name": config.llm_model}]
-    last = "no response"
-    for url in urls:
-        for payload in payloads:
-            try:
-                status, text = _post_json(url, payload, timeout)
-            except (urllib.error.URLError, OSError) as exc:
-                last = f"{url}: {exc}"
-                break  # this URL is unreachable; try the next one
-            if status < 300:
-                return
-            last = f"{url} -> {status} {text[:200]}"
-            if status == 404:
-                break  # wrong URL, no point trying other payloads on it
-    raise RuntimeError(f"The server did not accept the load request ({last}).")
-
-
-def ensure_model_loaded(config: Config, log=print, wait: float | None = None, poll: float = 2.0) -> str:
-    """Make sure the configured model is ready to answer, loading it if needed.
-
-    Returns "ready" if it already was, "loaded" if this call loaded it.
-    Other failures (bad key, unreachable server, unknown model) are raised.
-    """
-    wait = config.llm_load_timeout if wait is None else wait
     try:
         probe_model(config)
         return "ready"
     except Exception as exc:
         if not _looks_unloaded(exc):
             raise
-    log(f"Loading {config.llm_model} on the server (this can take a minute) ...")
-    request_model_load(config, timeout=wait)
+    log(f"{config.llm_model} is not loaded; waiting for the server to load it ...")
     deadline = time.monotonic() + wait
-    last: Exception | None = None
     while time.monotonic() < deadline:
+        time.sleep(poll)
         try:
             probe_model(config)
             log(f"{config.llm_model} is loaded.")
@@ -186,10 +149,9 @@ def ensure_model_loaded(config: Config, log=print, wait: float | None = None, po
         except Exception as exc:
             if not _looks_unloaded(exc):
                 raise
-            last = exc
-            time.sleep(poll)
     raise RuntimeError(
-        f"Gave up after {int(wait)}s waiting for the server to load {config.llm_model}: {last}"
+        f"The server has no model loaded and did not load {config.llm_model} on request. "
+        + AUTO_SWITCH_HINT
     )
 
 
