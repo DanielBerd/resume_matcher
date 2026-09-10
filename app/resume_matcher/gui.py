@@ -18,16 +18,47 @@ worker threads so the window appears instantly.
 
 from __future__ import annotations
 
+import os
 import queue
 import re
 import sys
 import threading
-import tkinter as tk
 import webbrowser
 from contextlib import redirect_stdout
 from pathlib import Path
-from tkinter import filedialog, ttk
 from urllib.parse import urlparse
+
+
+def ensure_tcl_env() -> None:
+    """Point Tcl/Tk at the base Python's script libraries on Windows.
+
+    Inside a venv on some Windows builds (Python 3.13 among them) the
+    interpreter does not work out where Tcl's init.tcl lives, and creating a
+    window fails with 'Can't find a usable init.tcl'. The base installation
+    has them under <base_prefix>\\tcl\\tcl8.6 and \\tk8.6; setting the
+    environment variables Tcl honours fixes it. Existing values are kept.
+    """
+    if sys.platform != "win32":
+        return
+    tcl_root = Path(sys.base_prefix) / "tcl"
+    if not tcl_root.is_dir():
+        return
+    for var, prefix in (("TCL_LIBRARY", "tcl"), ("TK_LIBRARY", "tk")):
+        if os.environ.get(var):
+            continue
+        candidates = sorted(
+            p for p in tcl_root.iterdir()
+            if p.is_dir() and p.name.startswith(prefix) and p.name[len(prefix):len(prefix) + 1].isdigit()
+            and (p / ("init.tcl" if prefix == "tcl" else "tk.tcl")).exists()
+        )
+        if candidates:
+            os.environ[var] = str(candidates[-1])
+
+
+ensure_tcl_env()
+
+import tkinter as tk  # noqa: E402  (after the Tcl environment is settled)
+from tkinter import filedialog, ttk  # noqa: E402
 
 from .config import SETTINGS_PATH, Config
 from .providers import HOSTED, LOCAL, find, pick_default_model, provider_names

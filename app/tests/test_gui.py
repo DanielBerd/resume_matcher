@@ -4,7 +4,9 @@ Skipped when tkinter is unavailable (it ships with Python on Windows and
 macOS; on Linux it may need a python3-tk package).
 """
 
+import os
 import queue
+import sys
 
 import pytest
 
@@ -69,3 +71,39 @@ def test_unreachable_text_names_host_and_tab():
 
     text = unreachable_text("http://localhost:8888/v1")
     assert "localhost" in text and "Server tab" in text
+
+
+def test_ensure_tcl_env_points_at_base_install(tmp_path, monkeypatch):
+    from resume_matcher.gui import ensure_tcl_env
+
+    base = tmp_path / "Python313"
+    (base / "tcl" / "tcl8.6").mkdir(parents=True)
+    (base / "tcl" / "tcl8.6" / "init.tcl").write_text("")
+    (base / "tcl" / "tk8.6").mkdir()
+    (base / "tcl" / "tk8.6" / "tk.tcl").write_text("")
+    (base / "tcl" / "tix8.4.3").mkdir()          # must be ignored
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(sys, "base_prefix", str(base))
+    monkeypatch.delenv("TCL_LIBRARY", raising=False)
+    monkeypatch.delenv("TK_LIBRARY", raising=False)
+
+    ensure_tcl_env()
+    assert os.environ["TCL_LIBRARY"] == str(base / "tcl" / "tcl8.6")
+    assert os.environ["TK_LIBRARY"] == str(base / "tcl" / "tk8.6")
+
+
+def test_ensure_tcl_env_keeps_existing_and_skips_elsewhere(tmp_path, monkeypatch):
+    from resume_matcher.gui import ensure_tcl_env
+
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(sys, "base_prefix", str(tmp_path))   # no tcl folder at all
+    monkeypatch.setenv("TCL_LIBRARY", "C:/custom/tcl")
+    monkeypatch.delenv("TK_LIBRARY", raising=False)
+    ensure_tcl_env()
+    assert os.environ["TCL_LIBRARY"] == "C:/custom/tcl"
+    assert "TK_LIBRARY" not in os.environ
+
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.delenv("TCL_LIBRARY", raising=False)
+    ensure_tcl_env()
+    assert "TCL_LIBRARY" not in os.environ
