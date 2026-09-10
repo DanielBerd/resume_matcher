@@ -35,6 +35,17 @@ PROVIDERS: tuple[Provider, ...] = (
 BY_NAME = {p.name: p for p in PROVIDERS}
 
 
+def pick_default_model(models: list[str], preferred: str) -> str:
+    """Pick the model to preselect: the first whose id contains the preferred
+    name (case-insensitive), else the first model. Server-side ids carry org
+    prefixes and quantization suffixes that we do not want to hardcode."""
+    needle = preferred.lower()
+    for model in models:
+        if needle and needle in model.lower():
+            return model
+    return models[0]
+
+
 def provider_names() -> list[str]:
     return [p.name for p in PROVIDERS]
 

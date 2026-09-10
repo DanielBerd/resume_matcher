@@ -62,3 +62,10 @@ def test_summary_text_flags_hosted_mode():
     assert "api.openai.com" in summary_text(hosted)
     hosted.llm_model = ""
     assert "(no model set)" in summary_text(hosted)
+
+
+def test_unreachable_text_names_host_and_tab():
+    from resume_matcher.gui import unreachable_text
+
+    text = unreachable_text("http://localhost:8888/v1")
+    assert "localhost" in text and "Server tab" in text

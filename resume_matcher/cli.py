@@ -15,18 +15,8 @@ from .documents import load_resumes
 from .email_ingest import load_jobs_from_folder
 from .matcher import run
 from .llm_client import list_models
+from .providers import pick_default_model  # noqa: F401  (re-exported for callers/tests)
 from .report import print_report, write_report
-
-
-def pick_default_model(models: list[str], preferred: str) -> str:
-    """Pick the model to preselect: the first whose id contains the preferred
-    name (case-insensitive), else the first model. Server-side ids carry
-    org prefixes and quantization suffixes that we do not want to hardcode."""
-    needle = preferred.lower()
-    for model in models:
-        if needle and needle in model.lower():
-            return model
-    return models[0]
 
 
 def choose_model(config: Config) -> bool:

@@ -17,12 +17,14 @@ job. Everything runs on your own machine; nothing leaves it.
 
 ## Setup
 
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-```
+You need two things installed: **Python 3.10 or newer** (from
+[python.org](https://www.python.org/downloads/); on Windows tick *Add Python to
+PATH*) and **Unsloth Desktop** with a model loaded. That's it - no `pip`, no
+virtual environments. The first time you run a launcher it creates a private
+environment next to the code and installs everything into it, showing progress
+in a small window (a minute or two); after that it opens straight away.
 
-Then in Unsloth Desktop:
+In Unsloth Desktop:
 
 1. Download one of the supported Gemma 4 QAT models (pick by the memory you
    have - VRAM, or RAM if running on CPU):
@@ -51,17 +53,8 @@ installed; `.pdf` and `.docx` work out of the box.
 
 ## Usage
 
-The simplest way to run it: put your job postings in `jobs/` and resumes in
-`resumes/`, then run the launcher. It scores everything, opens the HTML report
-in your browser, and keeps the window open so you can read any messages.
-
-- **Windows:** double-click **`run_matcher.bat`**.
-- **macOS / Linux:** double-click or run **`run_matcher.py`** (`python run_matcher.py`).
-
-### Window (drag and drop)
-
-For a small desktop window instead of a console, double-click **`run_gui.bat`**
-(Windows) or run `python run_gui.py`:
+Put your resumes in `resumes/`, then double-click **`run_gui.bat`** (Windows)
+or run `python run_gui.py` (macOS / Linux). A window opens:
 
 ![The Resume Matcher window](docs/gui_window.png)
 
@@ -98,6 +91,11 @@ fill in:
 `settings.json` next to the launchers; every run also saves it, so what you
 see is what runs. The file is gitignored because it can contain an API key.
 
+If the window cannot reach the model server, the *Server* tab gets a red dot
+and the line at the top of the *Match* tab turns red; clicking it takes you to
+the Server tab. Runs also check the connection first, so a stopped server
+fails immediately with that highlight rather than after scoring every resume.
+
 Everything speaks the same OpenAI-compatible API, so the command line works
 against hosted providers too: set `RM_LLM_BASE_URL`, `RM_LLM_API_KEY`, and
 `RM_LLM_MODEL` (or just use the values saved from the GUI, which the CLI
@@ -109,12 +107,21 @@ Drag-and-drop needs the optional `tkinterdnd2` package from
 The window itself needs tkinter, which ships with Python on Windows and macOS
 (on Linux: `sudo apt install python3-tk`).
 
+### Console launcher
+
+`run_matcher.bat` / `run_matcher.py` does the same as the window's *Run all
+jobs* button without a window: it scores everything in `jobs/`, opens the HTML
+report, and keeps the console open so you can read any messages. It sets up
+the environment on first run just like the window does.
+
 ### Command line
 
-For flags and test mode, use the module form directly:
+For flags and test mode, use the module form from inside the environment the
+launchers created (`.venv/Scripts/python` on Windows, `.venv/bin/python`
+elsewhere), or your own if you prefer to manage it yourself:
 
 ```bash
-python -m resume_matcher --jobs jobs/ --resumes resumes/
+.venv/bin/python -m resume_matcher --jobs jobs/ --resumes resumes/
 ```
 
 By default the tool reads real inputs from `jobs/` and `resumes/`. To try the
@@ -258,6 +265,7 @@ or the matching `RM_*` environment variables):
 | `resume_matcher/cli.py` | Command-line entry point |
 | `resume_matcher/gui.py` | Desktop window: Match tab (drag-and-drop / run folder) and Server tab |
 | `resume_matcher/providers.py` | Presets for the Server tab (local servers and hosted APIs) |
+| `bootstrap.py` | First-run setup shared by the launchers: create `.venv`, install requirements, relaunch |
 | `run_matcher.py` | Double-click launcher (runs the tool, opens the report) |
 | `run_matcher.bat` | Windows double-click launcher (finds Python, runs `run_matcher.py`) |
 | `watch_inbox.py` / `.bat` | Launchers for the Outlook inbox watcher |
@@ -266,8 +274,8 @@ or the matching `RM_*` environment variables):
 ## Tests
 
 ```bash
-pip install pytest
-pytest
+.venv/bin/python -m pip install pytest
+.venv/bin/python -m pytest
 ```
 
 ## Next steps (not yet implemented)

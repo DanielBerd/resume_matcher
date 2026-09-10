@@ -30,7 +30,7 @@ from tkinter import filedialog, ttk
 from urllib.parse import urlparse
 
 from .config import SETTINGS_PATH, Config
-from .providers import HOSTED, LOCAL, find, provider_names
+from .providers import HOSTED, LOCAL, find, pick_default_model, provider_names
 
 try:  # optional: enables real drag-and-drop
     from tkinterdnd2 import DND_FILES, TkinterDnD
@@ -53,11 +53,27 @@ def host_of(url: str) -> str:
         return url
 
 
+def unreachable_text(url: str) -> str:
+    """Summary-line text when the server cannot be reached; clicking it opens the Server tab."""
+    return f"Cannot reach the model server at {host_of(url)} - click here to fix it on the Server tab"
+
+
 def summary_text(config: Config) -> str:
     """One line for the Match tab saying what a run will use."""
     where = "hosted - data leaves this machine" if config.is_hosted else "local"
     model = config.llm_model or "(no model set)"
     return f"Using {model} @ {host_of(config.llm_base_url)} ({where})"
+
+
+def _make_dot(color: str, size: int = 9) -> tk.PhotoImage:
+    """A small filled circle for marking a notebook tab (no image files needed)."""
+    img = tk.PhotoImage(width=size + 4, height=size)
+    r = size / 2
+    for y in range(size):
+        for x in range(size):
+            if (x - r + 0.5) ** 2 + (y - r + 0.5) ** 2 <= r * r:
+                img.put(color, (x + 4, y))
+    return img
 
 
 class _QueueWriter:
@@ -109,12 +125,16 @@ class MatcherWindow:
         self._build_match_tab(match_tab)
         self._build_server_tab(server_tab)
         self.notebook.bind("<<NotebookTabChanged>>", lambda _e: self._apply_fields())
+        self._server_tab_index = 1
+        self._dot = _make_dot(_ERR)
+        self._server_alert = False
         self._refresh_summary()
 
     def _build_match_tab(self, tab: ttk.Frame) -> None:
         pad = {"padx": 10, "pady": 6}
-        self.summary = ttk.Label(tab, text="", foreground="gray")
+        self.summary = ttk.Label(tab, text="", foreground="gray", wraplength=600, justify="left")
         self.summary.pack(anchor="w", padx=10, pady=(8, 0))
+        self.summary.bind("<Button-1>", lambda _e: self._server_alert and self.notebook.select(self._server_tab_index))
 
         # Drop zone
         self.zone = tk.Canvas(tab, height=130, highlightthickness=0)
@@ -256,6 +276,7 @@ class MatcherWindow:
             self.key_var.set("local")
         self.model_box.configure(values=())
         self._set_server_status("")
+        self._set_server_alert(False)
         self._on_mode()
 
     def _on_mode(self) -> None:
@@ -304,8 +325,18 @@ class MatcherWindow:
         self.queue.put(("models", models))
 
     def _refresh_summary(self) -> None:
+        if self._server_alert:
+            self.summary.configure(text=unreachable_text(self.config.llm_base_url),
+                                   foreground=_ERR, cursor="hand2")
+            return
         self.summary.configure(text=summary_text(self.config),
-                               foreground=_WARN if self.config.is_hosted else "gray")
+                               foreground=_WARN if self.config.is_hosted else "gray", cursor="")
+
+    def _set_server_alert(self, on: bool) -> None:
+        """Red dot on the Server tab + red clickable summary while the server is unreachable."""
+        self._server_alert = on
+        self.notebook.tab(self._server_tab_index, image=self._dot if on else "", compound="right")
+        self._refresh_summary()
 
     # ---------- match tab actions ----------
 
@@ -359,6 +390,15 @@ class MatcherWindow:
                 from .report import write_report
 
                 config = self.config
+                try:
+                    from .llm_client import list_models
+
+                    list_models(config)
+                except Exception as exc:
+                    msg = f"Cannot reach the model server at {host_of(config.llm_base_url)}: {exc}"
+                    self.queue.put(("server_error", msg))
+                    raise RuntimeError(msg) from exc
+
                 resumes = load_resumes(config.resumes_dir)
                 if not resumes:
                     raise RuntimeError(f"No resumes found in {config.resumes_dir.resolve()}")
@@ -388,35 +428,41 @@ class MatcherWindow:
         try:
             while True:
                 kind, payload = self.queue.get_nowait()
-                if kind == "log":
-                    self._append(payload)
-                    match = _PROGRESS_RE.search(payload)
-                    if match:
-                        done, total = int(match.group(1)), int(match.group(2))
-                        self.progress.configure(maximum=total, value=done)
-                        self._set_status(f"Scoring {done}/{total}...")
-                elif kind == "models":
-                    self._set_models(payload)
-                elif kind == "server_error":
-                    self._set_server_status(payload, _ERR)
-                    self._append(f"[warn] {payload}")
-                elif kind == "done":
-                    self._finish(payload)
-                elif kind == "error":
-                    self._append(f"[error] {payload}")
-                    self._set_status(payload, error=True)
-                    self._idle()
+                try:
+                    self._handle(kind, payload)
+                except Exception as exc:  # a handler bug must not stop the pump
+                    self._append(f"[internal error] {kind}: {exc}")
         except queue.Empty:
             pass
         self.root.after(100, self._drain)
 
+    def _handle(self, kind: str, payload) -> None:
+        if kind == "log":
+            self._append(payload)
+            match = _PROGRESS_RE.search(payload)
+            if match:
+                done, total = int(match.group(1)), int(match.group(2))
+                self.progress.configure(maximum=total, value=done)
+                self._set_status(f"Scoring {done}/{total}...")
+        elif kind == "models":
+            self._set_models(payload)
+        elif kind == "server_error":
+            self._set_server_status(payload, _ERR)
+            self._append(f"[warn] {payload}")
+            self._set_server_alert(True)
+        elif kind == "done":
+            self._finish(payload)
+        elif kind == "error":
+            self._append(f"[error] {payload}")
+            self._set_status(payload, error=True)
+            self._idle()
+
     def _set_models(self, models: list[str]) -> None:
+        self._set_server_alert(False)
         self.model_box.configure(values=models)
         if models and not self.config.is_hosted and self.model_var.get() not in models:
             # Local servers report a handful of ids; preselect the configured
             # one by substring. Hosted lists are huge, so leave the text alone.
-            from .cli import pick_default_model
-
             self.model_var.set(pick_default_model(models, self.config.llm_model))
             self._apply_fields()
         shown = ", ".join(models[:8]) + (" ..." if len(models) > 8 else "")
