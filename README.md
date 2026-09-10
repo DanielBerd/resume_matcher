@@ -53,8 +53,9 @@ installed; `.pdf` and `.docx` work out of the box.
 
 ## Usage
 
-Put your resumes in `resumes/`, then double-click **`run_gui.bat`** (Windows)
-or run `python run_gui.py` (macOS / Linux). A window opens:
+Put your resumes in `resumes/`, then double-click **`run_gui.pyw`** (Windows;
+`run_gui.bat` also works but blinks a console for a moment) or run
+`python run_gui.py` (macOS / Linux). A window opens:
 
 ![The Resume Matcher window](docs/gui_window.png)
 
@@ -269,7 +270,7 @@ or the matching `RM_*` environment variables):
 | `run_matcher.py` | Double-click launcher (runs the tool, opens the report) |
 | `run_matcher.bat` | Windows double-click launcher (finds Python, runs `run_matcher.py`) |
 | `watch_inbox.py` / `.bat` | Launchers for the Outlook inbox watcher |
-| `run_gui.py` / `.bat` | Launchers for the desktop window |
+| `run_gui.py` / `.pyw` / `.bat` | Launchers for the desktop window (`.pyw`: no console at all on Windows) |
 
 ## Tests
 

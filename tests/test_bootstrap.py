@@ -67,3 +67,20 @@ def test_ensure_ready_creates_venv_and_installs(tmp_path):
     lines.clear()
     assert bootstrap.ensure_ready(lines.append, venv=venv, requirements=req) == py
     assert lines == []
+
+
+def test_quiet_kwargs_only_on_windows(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "linux")
+    assert bootstrap.quiet_subprocess_kwargs() == {}
+
+
+def test_setup_interpreter_prefers_pythonw_on_windows(tmp_path, monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
+    scripts = tmp_path / "Scripts"
+    scripts.mkdir()
+    (scripts / "python.exe").write_bytes(b"")
+    assert bootstrap.setup_interpreter(tmp_path).name == "python.exe"   # no pythonw yet
+    (scripts / "pythonw.exe").write_bytes(b"")
+    assert bootstrap.setup_interpreter(tmp_path).name == "pythonw.exe"
+    monkeypatch.setattr(sys, "platform", "linux")
+    assert bootstrap.setup_interpreter(tmp_path) == tmp_path / "bin" / "python"

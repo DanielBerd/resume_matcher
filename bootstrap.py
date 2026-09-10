@@ -26,6 +26,36 @@ MIN_PYTHON = (3, 10)
 IN_VENV_FLAG = "RESUME_MATCHER_IN_VENV"
 
 
+def quiet_subprocess_kwargs() -> dict:
+    """Keyword arguments that keep a child process from showing a console.
+
+    On Windows a console-subsystem child with no console gets a brand-new,
+    visible one - and so do its own children. Hiding the window at creation
+    time covers the whole subtree. Elsewhere there is nothing to hide.
+    """
+    if sys.platform != "win32":
+        return {}
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = subprocess.SW_HIDE
+    return {
+        "creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        "startupinfo": startupinfo,
+    }
+
+
+def setup_interpreter(venv: Path = VENV) -> Path:
+    """The venv interpreter used for ensurepip/pip during setup.
+
+    On Windows that is pythonw.exe: a GUI-subsystem program cannot open a
+    console, and neither can anything it launches via sys.executable (which
+    is how ensurepip and pip run their helpers). This is what removes the
+    console flash from first-time setup.
+    """
+    win = venv_python(venv, windowless=True)
+    return win if sys.platform == "win32" and win.exists() else venv_python(venv)
+
+
 def venv_python(venv: Path = VENV, windowless: bool = False) -> Path:
     """Interpreter inside the venv. windowless picks pythonw on Windows."""
     if sys.platform == "win32":
@@ -72,28 +102,36 @@ def ensure_ready(log=print, venv: Path = VENV, requirements: Path = REQUIREMENTS
     py = venv_python(venv)
     if not py.exists():
         log(f"First-time setup: creating a private Python environment in {venv.name}/ ...")
+        # with_pip=False: creating the interpreter is pure file copying with
+        # no subprocess. pip is bootstrapped separately below, through an
+        # interpreter that cannot pop up a console window.
         try:
             import venv as venv_mod
 
-            venv_mod.EnvBuilder(with_pip=True, clear=False, symlinks=(sys.platform != "win32")).create(venv)
-        except Exception as exc:  # ensurepip missing on some Linux system Pythons
-            raise RuntimeError(
-                f"Could not create the environment: {exc}\n"
-                "On Debian/Ubuntu install it with:  sudo apt install python3-venv\n"
-                "Then run this again."
-            ) from exc
+            venv_mod.EnvBuilder(with_pip=False, clear=False, symlinks=(sys.platform != "win32")).create(venv)
+        except Exception as exc:
+            raise RuntimeError(f"Could not create the environment: {exc}") from exc
         if not py.exists():
             raise RuntimeError(f"Environment was created but {py} is missing.")
+        result = subprocess.run(
+            [str(setup_interpreter(venv)), "-Im", "ensurepip", "--upgrade", "--default-pip"],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
+            errors="replace", **quiet_subprocess_kwargs(),
+        )
+        if result.returncode != 0:  # ensurepip missing on some Linux system Pythons
+            raise RuntimeError(
+                "Could not set up pip in the environment:\n" + result.stdout.strip()[-400:] + "\n"
+                "On Debian/Ubuntu install it with:  sudo apt install python3-venv\n"
+                "Then run this again."
+            )
 
     if not deps_current(stamp, requirements):
         log("Installing dependencies (this takes a minute or two the first time) ...")
-        cmd = [str(py), "-m", "pip", "install", "--disable-pip-version-check",
+        cmd = [str(setup_interpreter(venv)), "-m", "pip", "install", "--disable-pip-version-check",
                "--no-input", "-r", str(requirements)]
-        kwargs = {}
-        if sys.platform == "win32":  # no console flash when started from pythonw
-            kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                text=True, encoding="utf-8", errors="replace", **kwargs)
+                                text=True, encoding="utf-8", errors="replace",
+                                **quiet_subprocess_kwargs())
         assert proc.stdout is not None
         for line in proc.stdout:
             line = line.rstrip()
@@ -119,8 +157,6 @@ def relaunch(script: Path, args: list[str], windowless: bool = False, wait: bool
     cmd = [str(py), str(script), *args]
     if wait:
         return subprocess.call(cmd, env=env)
-    kwargs = {}
-    if sys.platform == "win32":
-        kwargs["creationflags"] = getattr(subprocess, "DETACHED_PROCESS", 0)
+    kwargs = quiet_subprocess_kwargs() if windowless else {}
     subprocess.Popen(cmd, env=env, **kwargs)
     return 0
