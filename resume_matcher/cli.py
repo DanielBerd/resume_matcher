@@ -119,7 +119,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    config = Config()
+    config = Config.load()
     if args.test_mode:
         # Bundled sample data, resolved relative to the repo so this works from any cwd.
         examples_dir = Path(__file__).resolve().parent.parent / "examples"
@@ -161,11 +161,14 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Loaded {len(jobs)} job posting(s) and {len(resumes)} resume(s).")
 
-    # --model pins the choice; otherwise ask the server what's loaded and let
-    # the user pick before matching starts.
-    if not args.model and not choose_model(config):
+    # --model pins the choice, and a saved hosted-API model is used as-is
+    # (hosted catalogs are huge); otherwise ask the server what's loaded and
+    # let the user pick before matching starts.
+    skip_picker = bool(args.model) or (config.is_hosted and bool(config.llm_model))
+    if not skip_picker and not choose_model(config):
         return 1
-    print(f"Model: {config.llm_model} @ {config.llm_base_url}")
+    print(f"Model: {config.llm_model} @ {config.llm_base_url}"
+          f"{'  [hosted API - data leaves this machine]' if config.is_hosted else ''}")
     if config.concurrency > 1:
         print(f"Scoring up to {config.concurrency} resumes at a time.")
 

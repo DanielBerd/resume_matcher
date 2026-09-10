@@ -38,8 +38,9 @@ Then in Unsloth Desktop:
    CPU, step down one row.
 2. Load the model and start Unsloth Desktop's local server.
 3. Check the server address it shows. The tool assumes
-   `http://localhost:8888/v1`; if yours differs, set `RM_LLM_BASE_URL` (or
-   pass `--base-url`) to that address **including the `/v1` suffix**.
+   `http://localhost:8888/v1`; if yours differs, enter it on the window's
+   *Server* tab, or set `RM_LLM_BASE_URL` / pass `--base-url` - **including
+   the `/v1` suffix**.
 
 The tool preselects whichever loaded model's id contains the configured name
 (`gemma-4-12b` by default, `RM_LLM_MODEL` to change), so the exact id the
@@ -78,6 +79,30 @@ native Windows styling.)*
 On Windows the launcher starts the app with `pythonw`, so you get just the
 window with no console behind it; if it cannot start, the reason appears in a
 dialog box.
+
+#### Server tab: local server or hosted API
+
+The *Server* tab decides where the model runs. Pick a preset and the fields
+fill in:
+
+- **Local server** - Unsloth Desktop (default) or any other OpenAI-compatible
+  server on this machine. Nothing leaves the computer. *Fetch models* lists
+  what the server has loaded and preselects the configured one.
+- **Hosted API** - OpenAI, OpenRouter, Groq, or a custom OpenAI-compatible
+  endpoint. Paste your API key and type the model id (hosted catalogs are
+  too large to pick from). A notice on the tab spells out the trade-off:
+  **job postings and the full text of every resume are sent to that
+  provider.** Use it knowingly - resumes are personal data.
+
+*Test connection* checks the address and key. *Save* writes the tab to
+`settings.json` next to the launchers; every run also saves it, so what you
+see is what runs. The file is gitignored because it can contain an API key.
+
+Everything speaks the same OpenAI-compatible API, so the command line works
+against hosted providers too: set `RM_LLM_BASE_URL`, `RM_LLM_API_KEY`, and
+`RM_LLM_MODEL` (or just use the values saved from the GUI, which the CLI
+reads as well). The preset model ids are starting points; providers rename
+models often, so check their current lists.
 
 Drag-and-drop needs the optional `tkinterdnd2` package from
 `requirements.txt`; without it the drop zone still works as click-to-browse.
@@ -128,9 +153,12 @@ Before matching starts, the tool queries the server for the loaded models and
 asks you to pick one (auto-selected when only one is loaded, or when running
 non-interactively). Pass `--model NAME` to skip the picker.
 
-Options: `--top N` (default 5), `--model NAME`, `--base-url URL`. Environment
-variables `RM_LLM_BASE_URL`, `RM_LLM_MODEL` are also honored (see
-`resume_matcher/config.py`).
+Options: `--top N` (default 5), `--model NAME`, `--base-url URL`.
+
+Settings layer in this order, later ones winning: built-in defaults, then
+`settings.json` (written by the GUI's Server tab), then environment variables
+(`RM_LLM_BASE_URL`, `RM_LLM_API_KEY`, `RM_LLM_MODEL`, `RM_CONCURRENCY`), then
+command-line flags. See `resume_matcher/config.py`.
 
 ## Throughput (concurrent scoring)
 
@@ -228,7 +256,8 @@ or the matching `RM_*` environment variables):
 | `resume_matcher/report.py` | Print top matches and save HTML/text/JSON reports |
 | `resume_matcher/compare.py` | Score the set with multiple models and report them side by side |
 | `resume_matcher/cli.py` | Command-line entry point |
-| `resume_matcher/gui.py` | Desktop window: drag-and-drop a job, or run the whole folder |
+| `resume_matcher/gui.py` | Desktop window: Match tab (drag-and-drop / run folder) and Server tab |
+| `resume_matcher/providers.py` | Presets for the Server tab (local servers and hosted APIs) |
 | `run_matcher.py` | Double-click launcher (runs the tool, opens the report) |
 | `run_matcher.bat` | Windows double-click launcher (finds Python, runs `run_matcher.py`) |
 | `watch_inbox.py` / `.bat` | Launchers for the Outlook inbox watcher |

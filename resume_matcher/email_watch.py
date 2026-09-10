@@ -101,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
 
     from pathlib import Path
 
-    config = Config()
+    config = Config.load()
     if args.resumes:
         config.resumes_dir = Path(args.resumes)
     if args.interval:

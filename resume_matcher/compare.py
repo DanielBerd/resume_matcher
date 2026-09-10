@@ -51,8 +51,7 @@ class ModelRun:
 
 def run_model(config: Config, model: str, jobs: list[JobPosting], resumes: list[Resume]) -> ModelRun:
     """Score every resume against every job with one model, timing the whole run."""
-    cfg = Config(**{**config.__dict__, "llm_model": model})
-    llm = LocalLLM(cfg)
+    llm = LocalLLM(config.with_model(model))
     run = ModelRun(model=model)
     total = len(jobs) * len(resumes)
     start = time.perf_counter()
@@ -181,7 +180,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--base-url", default=None, help="Model server URL, including /v1")
     args = parser.parse_args(argv)
 
-    config = Config()
+    config = Config.load()
     if args.test_mode:
         examples = Path(__file__).resolve().parent.parent / "examples"
         config.jobs_dir, config.resumes_dir = examples / "jobs", examples / "resumes"

@@ -40,3 +40,25 @@ def test_progress_regex_reads_matcher_output():
 
 def test_progress_regex_ignores_other_lines():
     assert _PROGRESS_RE.search("Report saved to results/run.html") is None
+
+
+def test_host_of_extracts_hostname():
+    from resume_matcher.gui import host_of
+
+    assert host_of("https://api.openai.com/v1") == "api.openai.com"
+    assert host_of("http://localhost:8888/v1") == "localhost"
+    assert host_of("not a url") == "not a url"
+
+
+def test_summary_text_flags_hosted_mode():
+    from resume_matcher.config import Config
+    from resume_matcher.gui import summary_text
+
+    local = Config()
+    assert summary_text(local) == "Using gemma-4-12b @ localhost (local)"
+    hosted = Config()
+    hosted.llm_mode, hosted.llm_base_url, hosted.llm_model = "hosted", "https://api.openai.com/v1", "gpt-x"
+    assert "data leaves this machine" in summary_text(hosted)
+    assert "api.openai.com" in summary_text(hosted)
+    hosted.llm_model = ""
+    assert "(no model set)" in summary_text(hosted)
