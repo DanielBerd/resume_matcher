@@ -53,8 +53,8 @@ installed; `.pdf` and `.docx` work out of the box.
 
 ## Usage
 
-Put your resumes in `resumes/`, then double-click **`ResumeMatcher.pyw`**
-(Windows) or run `python ResumeMatcher.pyw` (macOS / Linux). A window opens:
+Put your resumes in `resumes/`, then double-click **`ResumeMatcher.bat`**
+(Windows) or run `python app/run_gui.py` (macOS / Linux). A window opens:
 
 ![The Resume Matcher window](app/docs/gui_window.png)
 
@@ -69,10 +69,9 @@ native Windows styling.)*
 - Pick the model from the dropdown (populated from the server), watch progress
   and log output live, and the HTML report opens automatically when finished.
 
-On Windows a `.pyw` file runs with no console window at all; if it cannot
-start, the reason appears in a dialog box. Should double-clicking open the file
-in an editor instead of running it, use `app\run_gui.bat` (which blinks a
-console for a moment) or right-click it and choose *Open with -> Python*.
+On Windows the `.bat` blinks a console for a moment and then only the app
+window remains. If Python is not installed, it says so and where to get it;
+any other startup problem appears in a dialog box.
 
 #### Server tab: local server or hosted API
 
@@ -261,10 +260,10 @@ The root holds only what a user touches; everything technical is in `app/`.
 
 | Path | What it is |
 | --- | --- |
-| `ResumeMatcher.pyw` | The launcher - double-click to start |
+| `ResumeMatcher.bat` | The launcher - double-click to start (works even without Python: it says where to get it) |
 | `resumes/`, `jobs/` | Your resumes and saved job postings |
 | `results/` | Reports from each run (created on first run) |
-| `app/run_gui.py`, `run_gui.bat` | What the launcher runs; the `.bat` is a fallback |
+| `app/run_gui.py`, `run_gui.bat` | What the launcher runs (`python app/run_gui.py` on macOS / Linux) |
 | `app/run_matcher.py` / `.bat` | Console launcher: run all jobs, open the report |
 | `app/watch_inbox.py` / `.bat` | Launchers for the Outlook inbox watcher |
 | `app/bootstrap.py` | First-run setup: create `.venv`, install requirements, relaunch |
