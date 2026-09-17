@@ -107,3 +107,46 @@ def test_ensure_tcl_env_keeps_existing_and_skips_elsewhere(tmp_path, monkeypatch
     monkeypatch.delenv("TCL_LIBRARY", raising=False)
     ensure_tcl_env()
     assert "TCL_LIBRARY" not in os.environ
+
+
+def test_palettes_cover_the_same_keys():
+    from resume_matcher.gui import PALETTES
+
+    assert set(PALETTES) == {"light", "dark"}
+    assert PALETTES["light"].keys() == PALETTES["dark"].keys()
+    for pal in PALETTES.values():
+        assert all(v.startswith("#") and len(v) == 7 for v in pal.values())
+
+
+def test_windows_prefers_dark_reads_the_app_mode(monkeypatch):
+    import types
+
+    from resume_matcher.gui import windows_prefers_dark
+
+    monkeypatch.setattr(sys, "platform", "linux")
+    assert windows_prefers_dark() is False          # never consults the registry elsewhere
+
+    # Fake winreg: AppsUseLightTheme 0 means dark, 1 means light, missing means light.
+    store = {}
+    fake = types.SimpleNamespace(
+        HKEY_CURRENT_USER=object(),
+        OpenKey=lambda root, path: path,
+        QueryValueEx=lambda key, name: (store[name], 4) if name in store else (_ for _ in ()).throw(FileNotFoundError()),
+    )
+    monkeypatch.setitem(sys.modules, "winreg", fake)
+    monkeypatch.setattr(sys, "platform", "win32")
+
+    store["AppsUseLightTheme"] = 0
+    assert windows_prefers_dark() is True
+    store["AppsUseLightTheme"] = 1
+    assert windows_prefers_dark() is False
+    store.clear()
+    assert windows_prefers_dark() is False
+
+
+def test_windows_only_helpers_are_noops_elsewhere(monkeypatch):
+    from resume_matcher.gui import enable_dpi_awareness, set_title_bar_dark
+
+    monkeypatch.setattr(sys, "platform", "darwin")
+    enable_dpi_awareness()                          # must not touch ctypes.windll
+    set_title_bar_dark(object(), True)              # never dereferences the root off Windows

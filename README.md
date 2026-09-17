@@ -65,8 +65,9 @@ Put your resumes in `resumes/`, then double-click **`ResumeMatcher.bat`**
 
 ![The Resume Matcher window](app/docs/gui_window.png)
 
-*(Captured on Linux; on Windows the layout is the same but the controls use
-native Windows styling.)*
+The window uses the Windows 11 look and follows your *Settings >
+Personalization > Colors* app mode, so it comes up light or dark to match the
+rest of the desktop, and it renders sharp on scaled (high-DPI) displays.
 
 - **Drop a job posting** (`.txt`, `.eml`, `.pdf`, `.docx`) on the drop zone to
   score that one job against every resume in `resumes/`. Clicking the zone
@@ -108,10 +109,11 @@ check their current lists. Everything speaks the same OpenAI-compatible API,
 so any provider that does will work even without a preset - pick *Custom* and
 fill in the address yourself.
 
-Drag-and-drop needs the optional `tkinterdnd2` package from
-`requirements.txt`; without it the drop zone still works as click-to-browse.
-The window itself needs tkinter, which ships with Python on Windows and macOS
-(on Linux: `sudo apt install python3-tk`).
+Drag-and-drop needs the optional `tkinterdnd2` package and the Windows 11
+look needs `sv-ttk`, both from `requirements.txt`; without them the drop zone
+still works as click-to-browse and the window keeps the stock look. The window
+itself needs tkinter, which ships with Python on Windows and macOS (on Linux:
+`sudo apt install python3-tk`).
 
 ### Trying it with the sample data
 
@@ -220,6 +222,7 @@ The root holds only what a user touches; everything technical is in `app/`.
 | `app/resume_matcher/matcher.py` | Score jobs x resumes concurrently, keep top N |
 | `app/resume_matcher/report.py` | Save HTML/text/JSON reports |
 | `app/resume_matcher/gui.py` | Desktop window: Match tab and Server tab - the only entry point |
+| `app/resume_matcher/icon.ico`, `icon.png` | The window's icon |
 | `app/resume_matcher/config.py` | Settings, layered from defaults, `settings.json`, env |
 
 ## Tests

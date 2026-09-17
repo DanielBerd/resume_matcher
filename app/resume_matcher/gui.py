@@ -58,7 +58,7 @@ def ensure_tcl_env() -> None:
 ensure_tcl_env()
 
 import tkinter as tk  # noqa: E402  (after the Tcl environment is settled)
-from tkinter import filedialog, ttk  # noqa: E402
+from tkinter import filedialog, font as tkfont, ttk  # noqa: E402
 
 from .config import SETTINGS_PATH, Config
 from .providers import HOSTED, LOCAL, find, pick_default_model, provider_names
@@ -70,10 +70,98 @@ try:  # optional: enables real drag-and-drop
 except ImportError:  # pragma: no cover - depends on optional install
     _DND = False
 
+try:  # optional: the Windows 11 look for ttk widgets; the stock look otherwise
+    import sv_ttk
+except ImportError:  # pragma: no cover - depends on optional install
+    sv_ttk = None
+
+ICON_DIR = Path(__file__).resolve().parent
+
 _PROGRESS_RE = re.compile(r"\[(\d+)/(\d+) total")
 _WARN = "#b45309"
 _ERR = "#b42318"
 _OK = "#1a7f37"
+
+# Colours for the plain-tk widgets a ttk theme does not cover (the canvas drop
+# zone and the log), one set per theme.
+PALETTES = {
+    "light": {
+        "zone": "#fafafa", "zone_hover": "#e6f0fb", "dash": "#a3adba",
+        "title": "#1b1b1b", "muted": "#6b7280",
+        "log_bg": "#f6f8fa", "log_fg": "#24292f",
+    },
+    "dark": {
+        "zone": "#2b2b2b", "zone_hover": "#1e3a5f", "dash": "#5c6470",
+        "title": "#f0f0f0", "muted": "#9ca3af",
+        "log_bg": "#1a1a1a", "log_fg": "#d4d4d4",
+    },
+}
+
+
+def enable_dpi_awareness() -> None:
+    """Tell Windows this process handles DPI itself, so text renders crisp on
+    scaled displays instead of being bitmap-stretched. Must run before the
+    first window exists. System-wide awareness (not per-monitor) is chosen
+    because Tk does not re-lay-out when a window moves between monitors."""
+    if sys.platform != "win32":
+        return
+    import ctypes
+
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:  # pragma: no cover - pre-8.1 Windows
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
+
+
+def windows_prefers_dark() -> bool:
+    """True when Windows' Settings > Personalization > Colors app mode is Dark."""
+    if sys.platform != "win32":
+        return False
+    try:
+        import winreg
+
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+        )
+        value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+        return value == 0
+    except OSError:
+        return False
+
+
+def set_title_bar_dark(root: tk.Tk, dark: bool) -> None:
+    """Colour the title bar to match a dark theme (Windows 10 1809+); no-op elsewhere."""
+    if sys.platform != "win32":
+        return
+    import ctypes
+
+    try:
+        root.update_idletasks()
+        hwnd = ctypes.windll.user32.GetParent(root.winfo_id())
+        value = ctypes.c_int(int(dark))
+        # DWMWA_USE_IMMERSIVE_DARK_MODE is 20 from Windows 10 20H1; 19 before.
+        for attribute in (20, 19):
+            if ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                hwnd, attribute, ctypes.byref(value), ctypes.sizeof(value)
+            ) == 0:
+                break
+    except Exception:
+        pass
+
+
+def set_window_icon(root: tk.Tk) -> None:
+    """Use the bundled icon instead of Tk's feather; quietly keeps the default if missing."""
+    try:
+        if sys.platform == "win32":
+            root.iconbitmap(default=str(ICON_DIR / "icon.ico"))
+        else:
+            root.iconphoto(True, tk.PhotoImage(file=str(ICON_DIR / "icon.png")))
+    except Exception:
+        pass
 
 
 def host_of(url: str) -> str:
@@ -134,11 +222,26 @@ class MatcherWindow:
         self.busy = False
         self.last_report: Path | None = None
 
+        enable_dpi_awareness()
         self.root = TkinterDnD.Tk() if _DND else tk.Tk()
         self.root.title("Resume Matcher")
-        self.root.geometry("640x600")
-        self.root.minsize(540, 500)
+        set_window_icon(self.root)
+
+        # Theme follows the Windows app mode. With sv_ttk present the ttk
+        # widgets take on the Windows 11 look; otherwise they keep the stock
+        # look and only the palette for the plain-tk widgets applies.
+        self.theme = "dark" if windows_prefers_dark() else "light"
+        self.palette = PALETTES[self.theme]
+        self.themed = sv_ttk is not None
+        if self.themed:
+            sv_ttk.set_theme(self.theme)
+        # Pixel sizes are scaled by the display's DPI (fonts scale on their own).
+        self.scale = self.root.winfo_fpixels("1i") / 96.0
+        self.root.geometry(f"{self._px(660)}x{self._px(620)}")
+        self.root.minsize(self._px(560), self._px(520))
+
         self._build()
+        set_title_bar_dark(self.root, self.theme == "dark")
         self.root.after(100, self._drain)
         # A local server is cheap to ask; a hosted API is only queried on demand.
         if not self.config.is_hosted:
@@ -146,11 +249,24 @@ class MatcherWindow:
 
     # ---------- layout ----------
 
+    def _px(self, n: int) -> int:
+        return int(round(n * self.scale))
+
+    def _style(self, name: str) -> str:
+        """A theme-specific ttk style name, or the default when the theme is absent."""
+        return name if self.themed else ""
+
+    def _font(self, size: int, weight: str = "normal") -> tkfont.Font:
+        """The platform's UI font at a given size, so headings match the rest."""
+        f = tkfont.nametofont("TkDefaultFont").copy()
+        f.configure(size=size, weight=weight)
+        return f
+
     def _build(self) -> None:
         self.notebook = ttk.Notebook(self.root)
-        self.notebook.pack(fill="both", expand=True, padx=8, pady=8)
-        match_tab = ttk.Frame(self.notebook)
-        server_tab = ttk.Frame(self.notebook)
+        self.notebook.pack(fill="both", expand=True, padx=self._px(12), pady=(self._px(10), self._px(12)))
+        match_tab = ttk.Frame(self.notebook, padding=self._px(6))
+        server_tab = ttk.Frame(self.notebook, padding=self._px(6))
         self.notebook.add(match_tab, text="  Match  ")
         self.notebook.add(server_tab, text="  Server  ")
         self._build_match_tab(match_tab)
@@ -162,13 +278,15 @@ class MatcherWindow:
         self._refresh_summary()
 
     def _build_match_tab(self, tab: ttk.Frame) -> None:
-        pad = {"padx": 10, "pady": 6}
-        self.summary = ttk.Label(tab, text="", foreground="gray", wraplength=600, justify="left")
-        self.summary.pack(anchor="w", padx=10, pady=(8, 0))
+        pad = {"padx": self._px(10), "pady": self._px(6)}
+        self.summary = ttk.Label(tab, text="", foreground="gray", wraplength=self._px(600), justify="left")
+        self.summary.pack(anchor="w", padx=self._px(10), pady=(self._px(8), 0))
         self.summary.bind("<Button-1>", lambda _e: self._server_alert and self.notebook.select(self._server_tab_index))
 
         # Drop zone
-        self.zone = tk.Canvas(tab, height=130, highlightthickness=0)
+        self._zone_font = self._font(12, "bold")
+        self._zone_sub_font = self._font(9)
+        self.zone = tk.Canvas(tab, height=self._px(130), highlightthickness=0)
         self.zone.pack(fill="x", **pad)
         self.zone.bind("<Configure>", lambda _e: self._draw_zone())
         self.zone.bind("<Button-1>", lambda _e: self._browse_job())
@@ -181,20 +299,24 @@ class MatcherWindow:
 
         actions = ttk.Frame(tab)
         actions.pack(fill="x", **pad)
-        self.run_all_btn = ttk.Button(actions, text="Run all jobs in jobs/ folder", command=self._run_all)
+        self.run_all_btn = ttk.Button(actions, text="Run all jobs in jobs/ folder", command=self._run_all,
+                                      style=self._style("Accent.TButton"))
         self.run_all_btn.pack(side="left")
         self.open_btn = ttk.Button(actions, text="Open last report", command=self._open_report, state="disabled")
-        self.open_btn.pack(side="left", padx=8)
+        self.open_btn.pack(side="left", padx=self._px(8))
 
         self.progress = ttk.Progressbar(tab, mode="determinate")
-        self.progress.pack(fill="x", padx=10)
+        self.progress.pack(fill="x", padx=self._px(10))
         self.status = ttk.Label(tab, text="Ready", foreground="gray")
-        self.status.pack(anchor="w", padx=10, pady=(4, 0))
+        self.status.pack(anchor="w", padx=self._px(10), pady=(self._px(4), 0))
 
         frame = ttk.Frame(tab)
-        frame.pack(fill="both", expand=True, padx=10, pady=(6, 10))
+        frame.pack(fill="both", expand=True, padx=self._px(10), pady=(self._px(6), self._px(10)))
         self.log = tk.Text(frame, height=10, wrap="word", state="disabled",
-                           bg="#1e1e1e", fg="#d4d4d4", insertbackground="#d4d4d4",
+                           bg=self.palette["log_bg"], fg=self.palette["log_fg"],
+                           insertbackground=self.palette["log_fg"],
+                           relief="flat", borderwidth=0, highlightthickness=0,
+                           padx=self._px(8), pady=self._px(6),
                            font=("Consolas" if sys.platform == "win32" else "monospace", 9))
         bar = ttk.Scrollbar(frame, command=self.log.yview)
         self.log.configure(yscrollcommand=bar.set)
@@ -203,13 +325,13 @@ class MatcherWindow:
 
     def _build_server_tab(self, tab: ttk.Frame) -> None:
         c = self.config
-        form = ttk.Frame(tab)
-        form.pack(fill="x", padx=12, pady=12)
+        form = ttk.Frame(tab, style=self._style("Card.TFrame"), padding=self._px(16))
+        form.pack(fill="x", padx=self._px(10), pady=self._px(10))
         form.columnconfigure(1, weight=1)
         row = 0
 
         def label(text: str) -> None:
-            ttk.Label(form, text=text).grid(row=row, column=0, sticky="w", pady=4, padx=(0, 10))
+            ttk.Label(form, text=text).grid(row=row, column=0, sticky="w", pady=4, padx=(0, self._px(12)))
 
         label("Preset:")
         self.provider_var = tk.StringVar(value=c.llm_provider if find(c.llm_provider) else provider_names()[0])
@@ -256,40 +378,42 @@ class MatcherWindow:
         conc = ttk.Frame(form)
         conc.grid(row=row, column=1, columnspan=2, sticky="w", pady=4)
         ttk.Spinbox(conc, from_=1, to=16, width=5, textvariable=self.conc_var).pack(side="left")
-        ttk.Label(conc, text="requests in flight (match the server's parallel slots)",
-                  foreground="gray").pack(side="left", padx=(8, 0))
+        ttk.Label(conc, text="in flight at once - match the server's slots",
+                  foreground="gray").pack(side="left", padx=(self._px(8), 0))
         row += 1
 
-        self.privacy = ttk.Label(form, text="", foreground=_WARN, wraplength=560, justify="left")
+        self.privacy = ttk.Label(form, text="", foreground=_WARN, wraplength=self._px(560), justify="left")
         self.privacy.grid(row=row, column=0, columnspan=3, sticky="w", pady=(8, 2))
         row += 1
 
         buttons = ttk.Frame(form)
         buttons.grid(row=row, column=0, columnspan=3, sticky="w", pady=(8, 0))
         ttk.Button(buttons, text="Test connection", command=self._test_connection).pack(side="left")
-        ttk.Button(buttons, text="Save", command=self._save).pack(side="left", padx=8)
+        ttk.Button(buttons, text="Save", command=self._save,
+                   style=self._style("Accent.TButton")).pack(side="left", padx=self._px(8))
         row += 1
 
-        self.server_status = ttk.Label(form, text="", foreground="gray", wraplength=560, justify="left")
+        self.server_status = ttk.Label(form, text="", foreground="gray", wraplength=self._px(560), justify="left")
         self.server_status.grid(row=row, column=0, columnspan=3, sticky="w", pady=(6, 0))
         row += 1
 
         ttk.Label(form, text=f"Settings are saved to app/{SETTINGS_PATH.name} (kept out of git). "
                              "Runs use the values shown here.",
-                  foreground="gray", wraplength=560, justify="left"
+                  foreground="gray", wraplength=self._px(560), justify="left"
                   ).grid(row=row, column=0, columnspan=3, sticky="w", pady=(12, 0))
         self._on_mode()
 
     def _draw_zone(self, hover: bool = False) -> None:
-        c = self.zone
+        c, pal = self.zone, self.palette
         c.delete("all")
         w, h = c.winfo_width(), c.winfo_height()
-        c.configure(bg="#e8f0fe" if hover else "#f3f4f6")
-        c.create_rectangle(6, 6, w - 6, h - 6, dash=(6, 4), outline="#9aa4b2", width=2)
+        m = self._px(6)
+        c.configure(bg=pal["zone_hover"] if hover else pal["zone"])
+        c.create_rectangle(m, m, w - m, h - m, dash=(6, 4), outline=pal["dash"], width=2)
         headline = "Drop a job posting here" if _DND else "Click to choose a job posting"
-        c.create_text(w // 2, h // 2 - 12, text=headline, font=("", 12, "bold"), fill="#374151")
+        c.create_text(w // 2, h // 2 - self._px(12), text=headline, font=self._zone_font, fill=pal["title"])
         sub = "or click to browse  -  .txt .eml .pdf .docx" if _DND else ".txt .eml .pdf .docx"
-        c.create_text(w // 2, h // 2 + 12, text=sub, font=("", 9), fill="#6b7280")
+        c.create_text(w // 2, h // 2 + self._px(12), text=sub, font=self._zone_sub_font, fill=pal["muted"])
 
     # ---------- server tab behaviour ----------
 

@@ -11,5 +11,7 @@ Pillow>=10.0          # image handling for pytesseract
 # Without it, image-based resumes fall back to model vision transcription (set RM_OCR=1) or are skipped.
 tkinterdnd2>=0.4          # drag-and-drop in the GUI window (optional: without it
                           # the drop zone still works as click-to-browse)
+sv-ttk>=2.6               # Windows 11 look for the window, light and dark (optional:
+                          # without it the window keeps the stock ttk look)
 # .doc (legacy Word) files require an external converter, e.g. LibreOffice or antiword.
 # See resume_matcher/documents.py for the stub.
