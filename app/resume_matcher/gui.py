@@ -235,10 +235,11 @@ class MatcherWindow:
         self.themed = sv_ttk is not None
         if self.themed:
             sv_ttk.set_theme(self.theme)
+        self._configure_fonts()
         # Pixel sizes are scaled by the display's DPI (fonts scale on their own).
         self.scale = self.root.winfo_fpixels("1i") / 96.0
-        self.root.geometry(f"{self._px(660)}x{self._px(620)}")
-        self.root.minsize(self._px(560), self._px(520))
+        self.root.geometry(f"{self._px(700)}x{self._px(660)}")
+        self.root.minsize(self._px(600), self._px(560))
 
         self._build()
         set_title_bar_dark(self.root, self.theme == "dark")
@@ -255,6 +256,22 @@ class MatcherWindow:
     def _style(self, name: str) -> str:
         """A theme-specific ttk style name, or the default when the theme is absent."""
         return name if self.themed else ""
+
+    def _configure_fonts(self) -> None:
+        """Bring Tk's default fonts up to the Windows 11 body size.
+
+        Tk's Windows default is Segoe UI 9pt, the Win32-era size; current
+        Windows apps use 14px body text (about 10.5pt), which is also what
+        the theme gives entry fields, so labels and buttons looked smaller
+        than the fields next to them. Segoe UI Variable is used when present
+        (Windows 11) so everything matches the theme's own fonts.
+        """
+        family = None
+        if sys.platform == "win32" and "Segoe UI Variable Text" in tkfont.families():
+            family = "Segoe UI Variable Text"
+        for name in ("TkDefaultFont", "TkTextFont", "TkMenuFont", "TkHeadingFont", "TkCaptionFont"):
+            f = tkfont.nametofont(name)
+            f.configure(size=10, **({"family": family} if family else {}))
 
     def _font(self, size: int, weight: str = "normal") -> tkfont.Font:
         """The platform's UI font at a given size, so headings match the rest."""
@@ -284,8 +301,8 @@ class MatcherWindow:
         self.summary.bind("<Button-1>", lambda _e: self._server_alert and self.notebook.select(self._server_tab_index))
 
         # Drop zone
-        self._zone_font = self._font(12, "bold")
-        self._zone_sub_font = self._font(9)
+        self._zone_font = self._font(14, "bold")
+        self._zone_sub_font = self._font(10)
         self.zone = tk.Canvas(tab, height=self._px(130), highlightthickness=0)
         self.zone.pack(fill="x", **pad)
         self.zone.bind("<Configure>", lambda _e: self._draw_zone())
@@ -317,7 +334,7 @@ class MatcherWindow:
                            insertbackground=self.palette["log_fg"],
                            relief="flat", borderwidth=0, highlightthickness=0,
                            padx=self._px(8), pady=self._px(6),
-                           font=("Consolas" if sys.platform == "win32" else "monospace", 9))
+                           font=("Consolas" if sys.platform == "win32" else "monospace", 10))
         bar = ttk.Scrollbar(frame, command=self.log.yview)
         self.log.configure(yscrollcommand=bar.set)
         bar.pack(side="right", fill="y")
