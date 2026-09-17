@@ -1,12 +1,12 @@
-"""One-click setup shared by the launchers. Standard library only.
+"""One-click setup for the launcher. Standard library only.
 
 First run: create ``.venv`` next to this file, install requirements.txt into
 it, and relaunch the launcher inside it. Later runs: a hash of
 requirements.txt is compared to a stamp in the venv, so nothing is installed
 unless the requirements changed, and the relaunch takes well under a second.
 
-Callers pass a ``log`` callable (console print, or a GUI log) so the slow
-first-time install is visible wherever it is happening.
+The caller passes a ``log`` callable (the setup window's status line) so the
+slow first-time install is visible while it runs.
 """
 
 from __future__ import annotations

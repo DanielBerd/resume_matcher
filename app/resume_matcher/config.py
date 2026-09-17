@@ -21,7 +21,7 @@ from pathlib import Path
 
 # Folder layout, anchored to this file so nothing depends on the current
 # working directory (double-click launchers start anywhere):
-#   <project>/ResumeMatcher.pyw, README.md, resumes/, jobs/, results/
+#   <project>/ResumeMatcher.bat, README.md, resumes/, jobs/, results/
 #   <project>/app/                 code, launchers, .venv, settings.json
 APP_DIR = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = APP_DIR.parent
@@ -46,13 +46,8 @@ ENV_VARS = {
     "concurrency": "RM_CONCURRENCY",
     "llm_timeout": "RM_LLM_TIMEOUT",
     "llm_busy_wait": "RM_LLM_BUSY_WAIT",
-    "outlook_subject_filter": "RM_SUBJECT_FILTER",
-    "result_recipient": "RM_RESULT_TO",
-    "poll_interval": "RM_POLL_INTERVAL",
-    "imap_host": "RM_IMAP_HOST",
-    "imap_user": "RM_IMAP_USER",
-    "imap_password": "RM_IMAP_PASSWORD",
-    "imap_folder": "RM_IMAP_FOLDER",
+    "verbose": "RM_VERBOSE",
+    "ocr": "RM_OCR",
 }
 
 
@@ -105,8 +100,7 @@ class Config:
 
     # --- Input locations ---
     resumes_dir: Path = field(default_factory=lambda: PROJECT_ROOT / "resumes")
-    # Job postings saved from email (.txt or .eml). For live inbox watching
-    # instead of a folder, see email_watch.py.
+    # Job postings saved from email (.txt or .eml).
     jobs_dir: Path = field(default_factory=lambda: PROJECT_ROOT / "jobs")
 
     # --- Matching ---
@@ -120,26 +114,6 @@ class Config:
     # --- Output ---
     # Run results (HTML, text, JSON) are written here; the folder is gitignored.
     results_dir: Path = field(default_factory=lambda: PROJECT_ROOT / "results")
-
-    # --- Outlook inbox watching (Windows desktop Outlook via COM) ---
-    # See outlook.py / email_watch.py. Polls the inbox for unread job emails,
-    # matches each against all resumes, and emails the results back.
-    # Only process unread emails whose subject contains this text (case-
-    # insensitive). Empty means every unread email is treated as a job posting.
-    outlook_subject_filter: str = ""
-    # Where to send results. Empty means send them to the monitored mailbox
-    # itself (the signed-in Outlook account), so you receive the matches.
-    result_recipient: str = ""
-    # Seconds between inbox polls.
-    poll_interval: int = 60
-    # Mark a job email as read once its results have been sent.
-    mark_processed_read: bool = True
-
-    # --- Email ingestion, file-based (see email_ingest.py) ---
-    imap_host: str = ""
-    imap_user: str = ""
-    imap_password: str = ""
-    imap_folder: str = "INBOX"
 
     # ---------- layering ----------
 

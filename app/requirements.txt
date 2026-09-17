@@ -8,8 +8,7 @@ Pillow>=10.0          # image handling for pytesseract
 #   Windows: https://github.com/UB-Mannheim/tesseract/wiki (default install path is auto-detected)
 #   macOS:   brew install tesseract
 #   Linux:   apt install tesseract-ocr
-# Without it, image-based resumes fall back to model vision transcription (--ocr) or are skipped.
-pywin32>=306 ; sys_platform == "win32"   # Outlook inbox watching (Windows only)
+# Without it, image-based resumes fall back to model vision transcription (set RM_OCR=1) or are skipped.
 tkinterdnd2>=0.4          # drag-and-drop in the GUI window (optional: without it
                           # the drop zone still works as click-to-browse)
 # .doc (legacy Word) files require an external converter, e.g. LibreOffice or antiword.

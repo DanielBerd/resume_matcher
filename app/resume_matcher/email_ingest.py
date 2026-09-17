@@ -1,10 +1,8 @@
 """Job posting ingestion.
 
-Step 1 of the workflow: the user receives job postings by email.
-
-Scaffolding approach: for now, job postings are read from a local folder
-(one posting per file, .txt or .eml). Live IMAP fetching is stubbed out
-below and can be filled in later without changing the rest of the pipeline.
+Job postings are read from a local folder, one posting per file. Save the
+email that carried the posting as .eml, or paste its text into a .txt file;
+.md, .pdf, .docx and .doc are read too.
 """
 
 from __future__ import annotations
@@ -69,17 +67,3 @@ def _parse_eml(path: Path) -> JobPosting:
     body_part = msg.get_body(preferencelist=("plain",))
     body = body_part.get_content() if body_part else ""
     return JobPosting(source=path.name, title=msg.get("Subject", path.stem), body=body)
-
-
-def fetch_jobs_from_imap(host: str, user: str, password: str, folder: str = "INBOX") -> list[JobPosting]:
-    """Fetch unread job-posting emails from an IMAP mailbox.
-
-    TODO(scaffolding): implement with imaplib —
-      1. Connect with imaplib.IMAP4_SSL(host) and log in.
-      2. Select `folder`, search for unseen messages (optionally filter by
-         sender/subject keywords like "job", "opening", "role").
-      3. Parse each message with email.message_from_bytes and extract the
-         plain-text body, as in _parse_eml above.
-      4. Return a list of JobPosting objects.
-    """
-    raise NotImplementedError("IMAP ingestion is not implemented yet; use load_jobs_from_folder.")

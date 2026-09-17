@@ -38,7 +38,7 @@ def transcribe_resumes(llm: LocalLLM, resumes: list[Resume], vision_fallback: bo
     """Extract text from image-based resumes (scanned PDFs, image files).
 
     Tesseract OCR is the first choice: it is local and takes seconds. The
-    model's vision input is the fallback (behind --ocr) since transcribing a
+    model's vision input is the fallback (behind the `ocr` setting) since transcribing a
     page can take minutes on partial GPU offload. Either way the resulting
     text is scored in a fresh call like any other resume; resumes that still
     have no text afterwards are dropped.
@@ -71,7 +71,7 @@ def transcribe_resumes(llm: LocalLLM, resumes: list[Resume], vision_fallback: bo
         else:
             print(
                 f"[note] Skipping image-based {resume.name}: install Tesseract for fast local OCR, "
-                "or rerun with --ocr to transcribe it with the model."
+                "or set RM_OCR=1 to transcribe it with the model."
             )
     return usable
 

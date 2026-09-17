@@ -1,6 +1,6 @@
 """Tests for choosing which server model to preselect."""
 
-from resume_matcher.cli import pick_default_model
+from resume_matcher.providers import pick_default_model
 
 
 def test_matches_preferred_name_as_substring():
