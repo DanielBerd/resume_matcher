@@ -78,6 +78,9 @@ except ImportError:  # pragma: no cover - depends on optional install
 ICON_DIR = Path(__file__).resolve().parent
 
 _PROGRESS_RE = re.compile(r"\[(\d+)/(\d+) total")
+# Point size for all UI text. Tk's Windows default is 9pt (12px), which reads
+# small next to current Windows apps; 11pt is about 15px at 100% scaling.
+BODY_PT = 11
 _WARN = "#b45309"
 _ERR = "#b42318"
 _OK = "#1a7f37"
@@ -238,8 +241,8 @@ class MatcherWindow:
         self._configure_fonts()
         # Pixel sizes are scaled by the display's DPI (fonts scale on their own).
         self.scale = self.root.winfo_fpixels("1i") / 96.0
-        self.root.geometry(f"{self._px(700)}x{self._px(660)}")
-        self.root.minsize(self._px(600), self._px(560))
+        self.root.geometry(f"{self._px(740)}x{self._px(700)}")
+        self.root.minsize(self._px(640), self._px(600))
 
         self._build()
         set_title_bar_dark(self.root, self.theme == "dark")
@@ -258,20 +261,24 @@ class MatcherWindow:
         return name if self.themed else ""
 
     def _configure_fonts(self) -> None:
-        """Bring Tk's default fonts up to the Windows 11 body size.
+        """Set every UI font to BODY_PT.
 
-        Tk's Windows default is Segoe UI 9pt, the Win32-era size; current
-        Windows apps use 14px body text (about 10.5pt), which is also what
-        the theme gives entry fields, so labels and buttons looked smaller
-        than the fields next to them. Segoe UI Variable is used when present
-        (Windows 11) so everything matches the theme's own fonts.
+        Tk's defaults cover labels, buttons and tabs. The theme puts its own
+        named fonts on entry fields, comboboxes and spinboxes, so those are
+        raised too or they would end up smaller than the labels beside them.
+        Segoe UI Variable is used when present (Windows 11) so the faces match.
         """
         family = None
         if sys.platform == "win32" and "Segoe UI Variable Text" in tkfont.families():
             family = "Segoe UI Variable Text"
         for name in ("TkDefaultFont", "TkTextFont", "TkMenuFont", "TkHeadingFont", "TkCaptionFont"):
             f = tkfont.nametofont(name)
-            f.configure(size=10, **({"family": family} if family else {}))
+            f.configure(size=BODY_PT, **({"family": family} if family else {}))
+        for name in ("SunValleyBodyFont", "SunValleyBodyStrongFont", "SunValleyCaptionFont"):
+            try:
+                tkfont.nametofont(name).configure(size=BODY_PT)
+            except tk.TclError:  # theme not loaded
+                pass
 
     def _font(self, size: int, weight: str = "normal") -> tkfont.Font:
         """The platform's UI font at a given size, so headings match the rest."""
@@ -301,8 +308,8 @@ class MatcherWindow:
         self.summary.bind("<Button-1>", lambda _e: self._server_alert and self.notebook.select(self._server_tab_index))
 
         # Drop zone
-        self._zone_font = self._font(14, "bold")
-        self._zone_sub_font = self._font(10)
+        self._zone_font = self._font(BODY_PT + 4, "bold")
+        self._zone_sub_font = self._font(BODY_PT)
         self.zone = tk.Canvas(tab, height=self._px(130), highlightthickness=0)
         self.zone.pack(fill="x", **pad)
         self.zone.bind("<Configure>", lambda _e: self._draw_zone())
@@ -334,7 +341,7 @@ class MatcherWindow:
                            insertbackground=self.palette["log_fg"],
                            relief="flat", borderwidth=0, highlightthickness=0,
                            padx=self._px(8), pady=self._px(6),
-                           font=("Consolas" if sys.platform == "win32" else "monospace", 10))
+                           font=("Consolas" if sys.platform == "win32" else "monospace", BODY_PT - 1))
         bar = ttk.Scrollbar(frame, command=self.log.yview)
         self.log.configure(yscrollcommand=bar.set)
         bar.pack(side="right", fill="y")
