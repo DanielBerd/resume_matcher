@@ -77,10 +77,11 @@ rest of the desktop, and it renders sharp on scaled (high-DPI) displays.
 - Pick the model from the dropdown (populated from the server), watch progress
   and log output live, and the HTML report opens automatically when finished.
 
-The first run also leaves a **Resume Matcher** shortcut next to the `.bat`.
-It does the same thing but shows the app icon, starts without the brief
-console flash, and can be pinned to Start or copied to the desktop - use
-that from then on. If Python is not installed, the launcher says so and where
+The first run also creates a **Resume Matcher** shortcut, next to the `.bat`
+and in the Start Menu. It does the same thing but shows the app icon and
+starts without the brief console flash - use that from then on. Because it
+is in the Start Menu you can search for it, and right-clicking the running
+app's taskbar button offers *Pin to taskbar*. If Python is not installed, the launcher says so and where
 to get it; any other startup problem appears in a dialog box.
 
 #### Server tab: local server or hosted API
@@ -208,11 +209,12 @@ The root holds only what a user touches; everything technical is in `app/`.
 | Path | What it is |
 | --- | --- |
 | `ResumeMatcher.bat` | The launcher - double-click to start (works even without Python: it says where to get it) |
-| `Resume Matcher.lnk` | Shortcut the launcher creates on first run: same thing with the app icon, pin it to Start or copy it to the desktop |
+| `Resume Matcher.lnk` | Shortcut the launcher creates on first run (also placed in the Start Menu): same thing with the app icon |
 | `resumes/`, `jobs/` | Your resumes and saved job postings |
 | `results/` | Reports from each run (created on first run) |
 | `app/run_gui.py`, `run_gui.bat` | What the launcher runs (`python app/run_gui.py` on macOS / Linux) |
 | `app/bootstrap.py` | First-run setup: create `.venv`, install requirements, relaunch |
+| `app/make_shortcut.ps1` | First-run setup: the shortcuts, stamped with the app id so taskbar pinning works |
 | `app/requirements.txt` | Dependencies, installed automatically on first run |
 | `app/.venv/`, `settings.json`, `setup.log` | Created on first run (not in git) |
 | `app/examples/` | Sample jobs and resumes to try it out |
