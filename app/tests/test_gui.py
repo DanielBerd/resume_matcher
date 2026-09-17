@@ -145,8 +145,9 @@ def test_windows_prefers_dark_reads_the_app_mode(monkeypatch):
 
 
 def test_windows_only_helpers_are_noops_elsewhere(monkeypatch):
-    from resume_matcher.gui import enable_dpi_awareness, set_title_bar_dark
+    from resume_matcher.gui import enable_dpi_awareness, set_app_id, set_title_bar_dark
 
     monkeypatch.setattr(sys, "platform", "darwin")
     enable_dpi_awareness()                          # must not touch ctypes.windll
+    set_app_id()
     set_title_bar_dark(object(), True)              # never dereferences the root off Windows

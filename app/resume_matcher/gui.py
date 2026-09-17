@@ -119,6 +119,23 @@ def enable_dpi_awareness() -> None:
             pass
 
 
+def set_app_id(app_id: str = "DanielBerd.ResumeMatcher") -> None:
+    """Give the process its own taskbar identity on Windows.
+
+    Without this, Windows files the window under pythonw.exe and shows the
+    Python icon on the taskbar regardless of the window's own icon. Must run
+    before the first window exists.
+    """
+    if sys.platform != "win32":
+        return
+    import ctypes
+
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+    except Exception:
+        pass
+
+
 def windows_prefers_dark() -> bool:
     """True when Windows' Settings > Personalization > Colors app mode is Dark."""
     if sys.platform != "win32":
@@ -226,6 +243,7 @@ class MatcherWindow:
         self.last_report: Path | None = None
 
         enable_dpi_awareness()
+        set_app_id()
         self.root = TkinterDnD.Tk() if _DND else tk.Tk()
         self.root.title("Resume Matcher")
         set_window_icon(self.root)

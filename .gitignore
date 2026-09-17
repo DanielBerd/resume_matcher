@@ -3,6 +3,8 @@ resumes/*
 !resumes/.gitkeep
 jobs/*
 !jobs/.gitkeep
+# Shortcut the launcher creates on first run (carries the app icon)
+Resume Matcher.lnk
 # Generated reports
 results/
 # Created by the launchers on first run; settings.json may hold an API key
