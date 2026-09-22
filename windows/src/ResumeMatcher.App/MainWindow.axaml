@@ -1,0 +1,115 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ResumeMatcher.App.MainWindow"
+        Title="Resume Matcher"
+        Width="780" Height="700" MinWidth="640" MinHeight="560"
+        Icon="/icon.ico"
+        FontFamily="Segoe UI Variable Text, Segoe UI, sans-serif"
+        FontSize="14">
+
+  <TabControl Margin="8" x:Name="Tabs">
+
+    <!-- ===================== Match ===================== -->
+    <TabItem Header="Match">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" Margin="8,12,8,8">
+
+        <TextBlock x:Name="Summary" Grid.Row="0" Classes="muted" TextWrapping="Wrap"
+                   Margin="4,0,4,10" Cursor="Hand" PointerPressed="OnSummaryClicked" />
+
+        <!-- Drop zone -->
+        <Border x:Name="DropZone" Grid.Row="1" Height="150" CornerRadius="8"
+                BorderThickness="2" Margin="4,0,4,14"
+                Background="{DynamicResource ZoneBrush}"
+                BorderBrush="{DynamicResource ZoneBorderBrush}"
+                Cursor="Hand" PointerPressed="OnBrowseJob">
+          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4">
+            <TextBlock Text="Drop a job posting here" FontSize="18" FontWeight="SemiBold"
+                       HorizontalAlignment="Center" />
+            <TextBlock Text="or click to browse  ·  .txt .eml .pdf .docx" Classes="muted"
+                       HorizontalAlignment="Center" />
+          </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="4,0,4,12">
+          <Button x:Name="RunAllButton" Content="Run all jobs" Classes="accent" Click="OnRunAll" />
+          <Button x:Name="OpenReportButton" Content="Open last report" IsEnabled="False" Click="OnOpenReport" />
+          <Button x:Name="CancelButton" Content="Stop" IsEnabled="False" Click="OnCancel" />
+          <Button Content="Open folders" Click="OnOpenFolders" />
+        </StackPanel>
+
+        <ProgressBar x:Name="Progress" Grid.Row="3" Height="4" Margin="4,0,4,6" Minimum="0" Maximum="1" />
+        <TextBlock x:Name="Status" Grid.Row="4" Text="Ready" Classes="muted" Margin="4,0,4,10" />
+
+        <Border Grid.Row="5" CornerRadius="6" Padding="2"
+                Background="{DynamicResource LogBrush}"
+                BorderThickness="1" Margin="4,0,4,4"
+                BorderBrush="{DynamicResource CardBorderBrush}">
+          <ScrollViewer x:Name="LogScroller">
+            <SelectableTextBlock x:Name="Log" Padding="10,8" TextWrapping="Wrap"
+                                 FontFamily="Cascadia Mono, Consolas, monospace" FontSize="12.5" />
+          </ScrollViewer>
+        </Border>
+      </Grid>
+    </TabItem>
+
+    <!-- ===================== Server ===================== -->
+    <TabItem Header="Server" x:Name="ServerTab">
+      <ScrollViewer>
+        <Border Margin="12" Padding="20" CornerRadius="8"
+                Background="{DynamicResource CardBrush}"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource CardBorderBrush}">
+          <Grid ColumnDefinitions="Auto,*,Auto" RowSpacing="10" ColumnSpacing="4"
+                RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Preset:" Classes="label" />
+            <ComboBox x:Name="PresetBox" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2"
+                      HorizontalAlignment="Stretch" SelectionChanged="OnPresetChanged" />
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Runs on:" Classes="label" />
+            <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="16">
+              <RadioButton x:Name="LocalRadio" GroupName="Mode" Content="Local (nothing leaves this PC)"
+                           IsChecked="True" Checked="OnModeChanged" />
+              <RadioButton x:Name="HostedRadio" GroupName="Mode" Content="Hosted API" Checked="OnModeChanged" />
+            </StackPanel>
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Base URL:" Classes="label" />
+            <TextBox x:Name="BaseUrlBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" />
+
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="API key:" Classes="label" />
+            <TextBox x:Name="ApiKeyBox" Grid.Row="3" Grid.Column="1" PasswordChar="●" />
+            <CheckBox x:Name="ShowKey" Grid.Row="3" Grid.Column="2" Content="Show"
+                      Margin="8,0,0,0" IsCheckedChanged="OnShowKeyChanged" />
+
+            <TextBlock Grid.Row="4" Grid.Column="0" Text="Model:" Classes="label" />
+            <ComboBox x:Name="ModelBox" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Stretch"
+                      IsEditable="True" SelectionChanged="OnModelChanged" />
+            <Button x:Name="FetchButton" Grid.Row="4" Grid.Column="2" Content="Fetch models"
+                    Margin="8,0,0,0" Click="OnFetchModels" />
+
+            <TextBlock Grid.Row="5" Grid.Column="0" Text="Concurrency:" Classes="label" />
+            <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="10">
+              <NumericUpDown x:Name="ConcurrencyBox" Minimum="1" Maximum="16" Increment="1"
+                             Width="120" FormatString="0" />
+              <TextBlock Text="in flight at once — match the server's slots"
+                         Classes="muted" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <TextBlock x:Name="PrivacyNote" Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3"
+                       TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="False"
+                       Foreground="{DynamicResource WarningBrush}" />
+
+            <StackPanel Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal"
+                        Spacing="8" Margin="0,10,0,0">
+              <Button Content="Test connection" Click="OnTestConnection" />
+              <Button Content="Save" Classes="accent" Click="OnSave" />
+            </StackPanel>
+
+            <TextBlock x:Name="ServerStatus" Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="3"
+                       TextWrapping="Wrap" Classes="muted" Margin="0,10,0,0" />
+          </Grid>
+        </Border>
+      </ScrollViewer>
+    </TabItem>
+  </TabControl>
+</Window>
