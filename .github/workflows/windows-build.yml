@@ -1,0 +1,44 @@
+name: Build Windows app
+
+# Builds the self-contained .exe and the installer on a Windows runner.
+# Cross-building the .exe from Linux works; Inno Setup needs Windows.
+on:
+  push:
+    branches: [windows-native]
+    tags: ["v*"]
+  pull_request:
+    branches: [windows-native]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: windows
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Test
+        run: dotnet test tests/ResumeMatcher.Tests --configuration Release
+
+      - name: Publish single-file exe
+        run: dotnet publish src/ResumeMatcher.App -p:PublishProfile=win-x64
+
+      - name: Build installer
+        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\ResumeMatcher.iss'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ResumeMatcher-windows
+          path: |
+            windows/src/ResumeMatcher.App/bin/publish/win-x64/ResumeMatcher.exe
+            windows/installer/Output/ResumeMatcherSetup.exe
