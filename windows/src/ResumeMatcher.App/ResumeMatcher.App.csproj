@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+    <AssemblyName>ResumeMatcher</AssemblyName>
+    <RootNamespace>ResumeMatcher.App</RootNamespace>
+
+    <!-- The shipping build is one self-contained win-x64 .exe; see
+         Properties/PublishProfiles/win-x64.pubxml. No RuntimeIdentifier is set
+         here so the project still builds and runs on the developer's own OS. -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../ResumeMatcher.Core/ResumeMatcher.Core.csproj" />
+    <AvaloniaResource Include="icon.ico" />
+  </ItemGroup>
+</Project>
