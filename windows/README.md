@@ -46,7 +46,7 @@ because an app in `Program Files` cannot write next to itself. Settings go to
 windows/
   src/ResumeMatcher.Core/    all the logic, plain net8.0 — no UI, no Windows types
   src/ResumeMatcher.App/     the window (Avalonia), ~400 lines of glue
-  tests/ResumeMatcher.Tests/ 42 tests, run anywhere
+  tests/ResumeMatcher.Tests/ 43 tests, run anywhere
   installer/                 Inno Setup script
 ```
 

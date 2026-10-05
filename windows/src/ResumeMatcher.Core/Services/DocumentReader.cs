@@ -19,33 +19,46 @@ public static class DocumentReader
     public static readonly string[] ResumeExtensions = [".pdf", ".docx", ".txt", ".md"];
     public static readonly string[] JobExtensions = [".txt", ".md", ".eml", ".pdf", ".docx"];
 
-    /// <summary>Read every supported resume in a folder, skipping ones with no text.</summary>
-    public static List<Resume> LoadResumes(string dir)
+    /// <summary>Read every supported resume in a folder. One with no readable text
+    /// (a scanned PDF, say) is left out, and its name added to
+    /// <paramref name="unreadable"/> so the caller can say so.</summary>
+    public static List<Resume> LoadResumes(string dir, ICollection<string>? unreadable = null)
     {
         var resumes = new List<Resume>();
-        if (!Directory.Exists(dir)) return resumes;
-
-        foreach (var path in Directory.EnumerateFiles(dir).OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+        foreach (var path in FilesToRead(dir, ResumeExtensions))
         {
-            if (!ResumeExtensions.Contains(Path.GetExtension(path).ToLowerInvariant())) continue;
             var text = TryExtract(path);
             if (!string.IsNullOrWhiteSpace(text)) resumes.Add(new Resume(path, text));
+            else unreadable?.Add(Path.GetFileName(path));
         }
         return resumes;
     }
 
-    public static List<JobPosting> LoadJobs(string dir)
+    /// <summary>Read every supported job posting in a folder; unreadable ones are
+    /// handled as in <see cref="LoadResumes"/>.</summary>
+    public static List<JobPosting> LoadJobs(string dir, ICollection<string>? unreadable = null)
     {
         var jobs = new List<JobPosting>();
-        if (!Directory.Exists(dir)) return jobs;
-
-        foreach (var path in Directory.EnumerateFiles(dir).OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+        foreach (var path in FilesToRead(dir, JobExtensions))
         {
-            if (!JobExtensions.Contains(Path.GetExtension(path).ToLowerInvariant())) continue;
             var job = TryLoadJob(path);
             if (job is not null) jobs.Add(job);
+            else unreadable?.Add(Path.GetFileName(path));
         }
         return jobs;
+    }
+
+    /// <summary>The files in a folder worth reading, in name order: a supported
+    /// extension, and not the "~$name.docx" lock file Word keeps beside a document
+    /// that is open.</summary>
+    private static IEnumerable<string> FilesToRead(string dir, string[] extensions)
+    {
+        if (!Directory.Exists(dir)) return [];
+
+        return Directory.EnumerateFiles(dir)
+            .Where(p => extensions.Contains(Path.GetExtension(p).ToLowerInvariant())
+                        && !Path.GetFileName(p).StartsWith("~$", StringComparison.Ordinal))
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>Read one posting. .eml keeps its Subject as the title.</summary>

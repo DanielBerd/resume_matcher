@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        FitToScreen();
         _settings.EnsureFolders();
 
         PresetBox.ItemsSource = Provider.All.Select(p => p.Name).ToList();
@@ -34,6 +35,26 @@ public partial class MainWindow : Window
 
         // A local server is cheap to ask; a hosted catalogue is fetched on demand.
         if (!_settings.IsHosted) _ = FetchModelsAsync(quiet: true);
+    }
+
+    /// <summary>
+    /// Shrink the default size to the screen the window opens on. 700 DIP is taller
+    /// than a 1080p laptop at 150% has room for, and Windows' default placement put
+    /// the bottom of the window under the taskbar even where it did fit.
+    /// </summary>
+    private void FitToScreen()
+    {
+        if ((Screens?.ScreenFromPoint(Position) ?? Screens?.Primary) is not { } screen) return;
+
+        // Width and Height are the client area; the borders and title bar come on top.
+        var roomWidth = screen.WorkingArea.Width / screen.Scaling - 16;
+        var roomHeight = screen.WorkingArea.Height / screen.Scaling - 48;
+
+        // On a very small screen fitting wins over the minimum size.
+        MinWidth = Math.Min(MinWidth, roomWidth);
+        MinHeight = Math.Min(MinHeight, roomHeight);
+        Width = Math.Min(Width, roomWidth);
+        Height = Math.Min(Height, roomHeight);
     }
 
     // ---------- settings <-> fields ----------
@@ -79,7 +100,13 @@ public partial class MainWindow : Window
         LocalRadio.IsChecked = p.Mode == LlmMode.Local;
         if (p.BaseUrl.Length > 0) BaseUrlBox.Text = p.BaseUrl;
         if (p.Model.Length > 0) SetModelText(p.Model);
-        if (!p.NeedsKey) ApiKeyBox.Text = "local";
+
+        // "local" is a placeholder, not a key. Clear it where a real key is needed,
+        // but never replace a key the user typed: a local server may need one too.
+        if (p.NeedsKey && ApiKeyBox.Text == "local") ApiKeyBox.Text = "";
+        if (!p.NeedsKey && string.IsNullOrEmpty(ApiKeyBox.Text)) ApiKeyBox.Text = "local";
+
+        SetServerStatus("");    // it described the previous server
         UpdatePrivacyNote();
         RefreshSummary();
     }
@@ -181,6 +208,7 @@ public partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(settings.Model))
         {
             SetStatus("Set a model on the Server tab first.", error: true);
+            SetServerStatus("Set a model first. Fetch models lists the ones the server offers.", error: true);
             Tabs.SelectedIndex = 1;
             return;
         }
@@ -201,13 +229,18 @@ public partial class MainWindow : Window
             SetStatus("Checking the server…");
             await client.ListModelsAsync(_run.Token);
 
-            var resumes = DocumentReader.LoadResumes(settings.Resumes);
-            if (resumes.Count == 0)
-                throw new InvalidOperationException($"No resumes found in {settings.Resumes}");
-
+            // A file with no readable text is left out. Say so, or a candidate
+            // silently drops out of the ranking.
+            var unreadable = new List<string>();
+            var resumes = DocumentReader.LoadResumes(settings.Resumes, unreadable);
             var jobs = singleJob is not null
                 ? [DocumentReader.TryLoadJob(singleJob) ?? throw new InvalidOperationException($"Could not read {singleJob}")]
-                : DocumentReader.LoadJobs(settings.Jobs);
+                : DocumentReader.LoadJobs(settings.Jobs, unreadable);
+            foreach (var name in unreadable)
+                Append($"Skipped {name}: no text could be read from it (a scanned PDF needs OCR, which this version lacks).");
+
+            if (resumes.Count == 0)
+                throw new InvalidOperationException($"No resumes found in {settings.Resumes}");
             if (jobs.Count == 0)
                 throw new InvalidOperationException($"No job postings found in {settings.Jobs}");
 
@@ -238,7 +271,13 @@ public partial class MainWindow : Window
         {
             SetStatus(ex.Message, error: true);
             Append($"Error: {ex.Message}");
-            if (ex is LlmException) Tabs.SelectedIndex = 1;
+            if (ex is LlmException)
+            {
+                // Send the user to where it gets fixed, and say there what went wrong
+                // rather than leaving the last "Connected" on show.
+                SetServerStatus(ex.Message, error: true);
+                Tabs.SelectedIndex = 1;
+            }
         }
         finally
         {

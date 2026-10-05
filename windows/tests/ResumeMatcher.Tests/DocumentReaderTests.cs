@@ -1,6 +1,8 @@
 using System.IO.Compression;
 using System.Text;
 using ResumeMatcher.Core.Services;
+using UglyToad.PdfPig.Content;
+using UglyToad.PdfPig.Writer;
 using Xunit;
 
 namespace ResumeMatcher.Tests;
@@ -85,6 +87,32 @@ public class DocumentReaderTests : IDisposable
 
         Assert.Single(resumes);
         Assert.Equal("real.txt", resumes[0].Name);
+    }
+
+    [Fact]
+    public void NamesTheFilesItCouldNotReadRatherThanDroppingThemSilently()
+    {
+        Write("real.txt", "A real resume with text.");
+        Write("blank.txt", "   \n  ");
+        Write("notes.xyz", "not a resume format at all");
+        Write("~$real.docx", "the lock file Word keeps beside an open document");
+
+        // A page with no text layer: what a scanned resume looks like to a reader.
+        using (var pdf = new PdfDocumentBuilder())
+        {
+            pdf.AddPage(PageSize.A4);
+            File.WriteAllBytes(Path.Combine(_dir, "scanned.pdf"), pdf.Build());
+        }
+
+        var unreadable = new List<string>();
+        Assert.Equal(["real.txt"], DocumentReader.LoadResumes(_dir, unreadable).Select(r => r.Name));
+        // Supported files that yielded nothing are named; other files and Word's
+        // lock file are not resumes at all, so they are not.
+        Assert.Equal(["blank.txt", "scanned.pdf"], unreadable);
+
+        var unreadableJobs = new List<string>();
+        Assert.Single(DocumentReader.LoadJobs(_dir, unreadableJobs));
+        Assert.Equal(["blank.txt", "scanned.pdf"], unreadableJobs);
     }
 
     [Fact]
