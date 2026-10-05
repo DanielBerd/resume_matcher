@@ -10,9 +10,16 @@ on:
     branches: [windows-native]
   workflow_dispatch:
 
+# Publishing the release replaces the previous one; never let two runs race.
+concurrency:
+  group: windows-build-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: windows-latest
+    permissions:
+      contents: write   # to publish the release
     defaults:
       run:
         working-directory: windows
@@ -42,3 +49,28 @@ jobs:
           path: |
             windows/src/ResumeMatcher.App/bin/publish/win-x64/ResumeMatcher.exe
             windows/installer/Output/ResumeMatcherSetup.exe
+
+      # Every push to the branch replaces one rolling prerelease, so the newest
+      # build is always at the same address. A prerelease never becomes the
+      # repo's "Latest" release, which stays with main.
+      - name: Publish as the windows-native-latest release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/windows-native'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: windows-native-latest
+        run: |
+          gh release view $env:TAG *> $null
+          if ($LASTEXITCODE -eq 0) { gh release delete $env:TAG --yes --cleanup-tag }
+          $notes = @"
+          Built automatically from the ``windows-native`` branch at commit ${{ github.sha }}.
+
+          - **ResumeMatcherSetup.exe**: installs for the current user, with Start Menu and desktop shortcuts. No admin rights needed.
+          - **ResumeMatcher.exe**: the same app on its own; runs without installing.
+
+          Neither file is code-signed, so Windows SmartScreen will warn on first run: choose *More info* → *Run anyway*.
+          "@
+          gh release create $env:TAG `
+            src/ResumeMatcher.App/bin/publish/win-x64/ResumeMatcher.exe `
+            installer/Output/ResumeMatcherSetup.exe `
+            --target ${{ github.sha }} --prerelease `
+            --title "Windows build (latest from windows-native)" --notes $notes
