@@ -52,9 +52,10 @@ export class LlmClient {
 
   /** Score one resume against one job: its own request, its own context. */
   async score(job, resume, signal) {
-    const reply = await this.#complete(SYSTEM_PROMPT, buildUserPrompt(job, resume), signal);
-    const { score, comment } = parseReply(reply);
-    return { resume, job, score, comment };
+    const { content, usage, ms } = await this.#complete(
+      SYSTEM_PROMPT, buildUserPrompt(job, resume), signal);
+    const { score, comment } = parseReply(content);
+    return { resume, job, score, comment, stats: { ...usage, ms } };
   }
 
   async #complete(system, user, signal) {
@@ -65,7 +66,10 @@ export class LlmClient {
       max_tokens: this.settings.maxTokens,
     };
 
+    const started = performance.now();
     const data = await this.#send(payload, signal);
+    const ms = performance.now() - started;
+
     const choice = data.choices?.[0];
     if (!choice) throw new LlmError('The server returned no choices.');
 
@@ -76,7 +80,17 @@ export class LlmClient {
         `The model returned an empty reply (finish_reason=${choice.finish_reason}). ` +
         "If that is 'length', it spent its whole budget on reasoning before answering — raise Max tokens.");
     }
-    return content;
+
+    // usage is optional in the OpenAI schema; vLLM and llama.cpp both send it.
+    const u = data.usage ?? {};
+    return {
+      content,
+      ms,
+      usage: {
+        promptTokens: Number(u.prompt_tokens) || 0,
+        completionTokens: Number(u.completion_tokens) || 0,
+      },
+    };
   }
 
   async #send(payload, signal) {

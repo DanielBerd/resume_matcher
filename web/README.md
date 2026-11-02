@@ -90,6 +90,38 @@ Settings are kept in `localStorage`, per browser.
 Supported: `.pdf`, `.docx`, `.txt`, `.md` resumes; those plus `.eml` for job
 postings, which keeps the email's Subject as the title.
 
+## Speed in the log
+
+Each call logs its own time and rate, and the run ends with a summary:
+
+```
+[1/5] anna_kovacs_senior_python_engineer.pdf scored 94 · 0.5s · 33 tok/s (18 out, 479 in)
+...
+5 request(s) in 1.0s · 88 completion + 2327 prompt tokens · 90.0 tok/s throughput, 34.4 tok/s per call
+```
+
+**The two rates are different numbers and only one of them is the one to
+watch.** Measured against a mock server on one job and five resumes:
+
+| | per call | throughput | wall time |
+| --- | --- | --- | --- |
+| concurrency 1 | 32.9 tok/s | 32.8 tok/s | 2.7s |
+| concurrency 4 | 34.4 tok/s | **90.0 tok/s** | 1.0s |
+
+- **per call** is one request's completion tokens over its own elapsed time.
+  It barely moves as concurrency rises, so on its own it makes batching look
+  pointless.
+- **throughput** is every completion token over the run's wall clock. This is
+  what actually finishes the work, and the number to use when tuning
+  concurrency against your server's slots.
+
+Two caveats on what these mean. The rates are **end to end**: with no
+streaming, a request's elapsed time includes queueing and prompt processing as
+well as decoding, so per-call tok/s reads lower than the decode speed a model
+server reports for itself. And token counts come from the response's `usage`
+field — vLLM and llama.cpp both send it, but a server that omits it gets
+timings only, and the log says so rather than inventing numbers.
+
 ## Security
 
 **Keep this on your LAN.** There is no authentication. Anyone who can reach the

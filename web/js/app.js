@@ -232,7 +232,7 @@ async function start() {
     log(`Matching ${jobs.length} job(s) against ${resumes.length} resume(s) using ${state.settings.model}`);
     setStatus('Working…');
 
-    const results = await runMatch(
+    const { results, stats } = await runMatch(
       client, jobs, resumes, state.settings,
       ({ done, total, message }) => {
         $('bar').style.width = `${total ? (done / total) * 100 : 0}%`;
@@ -242,11 +242,15 @@ async function start() {
     );
 
     state.results = results;
+    state.stats = stats;
     $('results').innerHTML = resultsMarkup(results);
     $('results').hidden = false;
     $('download').disabled = false;
     $('bar').style.width = '100%';
-    setStatus(`Done — ${jobs.length} job(s) scored.`);
+    setStatus(`Done — ${jobs.length} job(s) scored in ${(stats.wallMs / 1000).toFixed(1)}s` +
+              (stats.completionTokens
+                ? `, ${(stats.completionTokens / (stats.wallMs / 1000)).toFixed(1)} tok/s.`
+                : '.'));
   } catch (e) {
     if (e?.name === 'AbortError') {
       setStatus('Stopped.');
