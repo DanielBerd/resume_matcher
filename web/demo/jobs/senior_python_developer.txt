@@ -1,0 +1,17 @@
+Senior Python Developer — Acme Analytics
+
+We are looking for a Senior Python Developer to join our data platform team.
+
+Requirements:
+- 5+ years of professional Python experience
+- Experience with data pipelines (Airflow, dbt, or similar)
+- Solid SQL and experience with PostgreSQL
+- Familiarity with cloud platforms (AWS preferred)
+- Strong communication skills
+
+Nice to have:
+- Experience with machine learning workflows
+- Docker/Kubernetes
+
+This is an example job posting used to exercise the pipeline. Replace it with
+real postings saved from your email (.txt or .eml).

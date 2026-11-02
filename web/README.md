@@ -71,6 +71,20 @@ but you lose the single URL and any API key has to live in the browser.
 3. **Run match.** Results appear in the page; *Download report* saves a
    standalone HTML file.
 
+### Trying it without your own data
+
+*Use demo resumes* and *Use demo job postings* load the bundled sample set from
+`demo/` — five resumes (PDF and DOCX) and five postings (including one saved
+`.eml`), with deliberately varied fit so you can see whether the model's
+ranking makes sense.
+
+The boxes are **additive**: your own files and the demo set are kept separately
+and merged for a run, so you can score your real resume against the demo
+postings, or try a demo resume against a real job ad. Unticking a box removes
+only that set. If one of your files has the same name as a demo file, yours
+replaces it. The count says where things came from — *"6 resumes loaded
+(2 of yours + 4 demo)"*. *Clear files* drops everything and unticks both.
+
 Settings are kept in `localStorage`, per browser.
 
 Supported: `.pdf`, `.docx`, `.txt`, `.md` resumes; those plus `.eml` for job
@@ -97,14 +111,18 @@ js/llm.js           OpenAI-compatible client and its retry policy
 js/matcher.js       the job x resume matrix, concurrency, top N
 js/report.js        in-page results and the downloadable report
 js/config.js        settings in localStorage
+js/demo.js          fetches the bundled sample set
 js/app.js           wiring
+demo/               sample resumes and postings, with a manifest
 vendor/pdfjs/       pdf.js 4.10.38, vendored (Apache-2.0)
 Caddyfile           the one-origin reverse proxy
 docker-compose.yml  Caddy serving the site and proxying /v1
 ```
 
 `pdf.js` is vendored rather than loaded from a CDN so the app works with no
-internet access at all, which is the point of running it at home.
+internet access at all, which is the point of running it at home. `demo/` is a
+copy of `app/examples/` rather than a link to it, because the web root is
+deployed on its own.
 
 ## Behaviour carried over from the desktop versions
 
@@ -127,6 +145,11 @@ Run end to end in headless Chromium against a mock vLLM serving the site and
 - server side saw **exactly 10 calls for 2 jobs × 5 resumes** — no duplicates —
   with `peak_concurrency=4` matching the setting
 - no console or page errors
+
+The demo toggles were tested the same way: ticking both gives 5 + 5; adding two
+files of your own (one new name, one shadowing a demo file) gives *6 resumes
+(2 of yours + 4 demo)*; unticking leaves only your own; *Clear files* resets
+both and unticks the boxes.
 
 Not verified: a real vLLM server, Safari and Firefox (the folder picker uses
 `webkitdirectory`; the "pick individual files instead" link is the fallback),

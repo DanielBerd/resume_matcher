@@ -1,0 +1,20 @@
+Data Engineer — Nordic Freight Systems
+
+Nordic Freight Systems is hiring a Data Engineer to build and maintain the
+pipelines that power our logistics analytics platform.
+
+Responsibilities:
+- Design, build, and operate batch and streaming data pipelines
+- Model warehouse tables for analysts and downstream ML teams
+- Own data quality monitoring and alerting
+
+Requirements:
+- 3+ years working with Python and SQL in production
+- Hands-on experience with Apache Airflow or Dagster
+- Experience with a cloud data warehouse (Snowflake, BigQuery, or Redshift)
+- Comfortable with Docker and CI/CD workflows
+
+Nice to have:
+- Kafka or other streaming experience
+- dbt, Terraform
+- Experience in logistics, supply chain, or transportation

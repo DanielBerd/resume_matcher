@@ -5,16 +5,30 @@ import { readResume, readJob, RESUME_EXT, JOB_EXT } from './documents.js';
 import { LlmClient, LlmError } from './llm.js';
 import { run as runMatch } from './matcher.js';
 import { resultsMarkup, standaloneReport, timestamp } from './report.js';
+import { demoFiles } from './demo.js';
 
 const $ = (id) => document.getElementById(id);
 
 const state = {
   settings: cfg.load(),
-  resumes: [],
-  jobs: [],
+  // Kept apart so unchecking the demo box does not discard your own files,
+  // and loading your own does not discard the demo set.
+  resumes: { user: [], demo: [] },
+  jobs: { user: [], demo: [] },
   results: null,
   controller: null,
 };
+
+/**
+ * What a run actually uses: demo first, then your own. A file of yours with
+ * the same name as a demo file replaces it — loading it was deliberate.
+ */
+function merged(kind) {
+  const byName = new Map();
+  for (const item of state[kind].demo) byName.set(item.name ?? item.source, item);
+  for (const item of state[kind].user) byName.set(item.name ?? item.source, item);
+  return [...byName.values()];
+}
 
 // ---------- tabs ----------
 
@@ -106,10 +120,36 @@ wireZone($('job-zone'), {
 const pickResumeFiles = filePicker(RESUME_EXT, (files) => loadFiles(files, 'resumes'));
 $('pick-resume-files').addEventListener('click', (e) => { e.stopPropagation(); pickResumeFiles(); });
 
-async function loadFiles(files, kind) {
-  if (!files.length) return;
+// ---------- demo data ----------
+
+wireDemoToggle($('demo-resumes'), 'resumes');
+wireDemoToggle($('demo-jobs'), 'jobs');
+
+function wireDemoToggle(box, kind) {
+  box.addEventListener('change', async () => {
+    if (!box.checked) {
+      await loadFiles([], kind, 'demo');      // drops the demo set, keeps yours
+      log(`Demo ${kind} removed.`);
+      return;
+    }
+    box.disabled = true;
+    try {
+      await loadFiles(await demoFiles(kind), kind, 'demo');
+      log(`Demo ${kind} added.`);
+    } catch (e) {
+      box.checked = false;
+      setStatus(`Could not load the demo ${kind}: ${e.message}`, 'error');
+      log(`Demo ${kind} failed: ${e.message}`);
+    } finally {
+      box.disabled = false;
+    }
+  });
+}
+
+/** Read a batch of files into state[kind][slot], replacing whatever that slot held. */
+async function loadFiles(files, kind, slot = 'user') {
   const read = kind === 'resumes' ? readResume : readJob;
-  log(`Reading ${files.length} file(s) for ${kind}…`);
+  if (files.length) log(`Reading ${files.length} ${slot} file(s) for ${kind}…`);
 
   const loaded = [];
   let skipped = 0;
@@ -118,22 +158,45 @@ async function loadFiles(files, kind) {
     if (item) loaded.push(item); else skipped += 1;
   }
 
-  state[kind] = loaded;
-  const label = kind === 'resumes' ? 'resume' : 'job posting';
-  $(`${kind === 'resumes' ? 'resume' : 'job'}-status`).textContent =
-    loaded.length === 0
-      ? `No readable ${label}s found.`
-      : `${loaded.length} ${label}${loaded.length === 1 ? '' : 's'} loaded` +
-        (skipped ? ` (${skipped} skipped — unsupported or empty)` : '') + '.';
-
-  log(`${kind}: ${loaded.length} loaded, ${skipped} skipped.`);
+  state[kind][slot] = loaded;
+  if (files.length) log(`${kind} (${slot}): ${loaded.length} loaded, ${skipped} skipped.`);
+  if (skipped) log(`${skipped} file(s) skipped — unsupported type or no text.`);
+  refreshCounts(kind);
   refresh();
 }
 
+/** One line saying what a run would use, and where it came from. */
+function refreshCounts(kind) {
+  const label = kind === 'resumes' ? 'resume' : 'job posting';
+  const el = $(kind === 'resumes' ? 'resume-status' : 'job-status');
+  // Count by provenance, not by subtraction: one of your files may carry the
+  // same name as a demo file, in which case it replaces it and is still yours.
+  const items = merged(kind);
+  const yours = new Set(state[kind].user.map((i) => i.name ?? i.source));
+  const total = items.length;
+  const own = items.filter((i) => yours.has(i.name ?? i.source)).length;
+  const demo = total - own;
+
+  if (total === 0) {
+    el.textContent = `No ${label}s loaded.`;
+    return;
+  }
+  const parts = [];
+  if (own) parts.push(`${own} of yours`);
+  if (demo) parts.push(`${demo} demo`);
+  el.textContent =
+    `${total} ${label}${total === 1 ? '' : 's'} loaded` +
+    (parts.length > 1 ? ` (${parts.join(' + ')})` : demo ? ' (demo)' : '') + '.';
+}
+
 $('clear-files').addEventListener('click', () => {
-  state.resumes = []; state.jobs = []; state.results = null;
-  $('resume-status').textContent = 'No resumes loaded.';
-  $('job-status').textContent = 'No job postings loaded.';
+  state.resumes = { user: [], demo: [] };
+  state.jobs = { user: [], demo: [] };
+  state.results = null;
+  $('demo-resumes').checked = false;
+  $('demo-jobs').checked = false;
+  refreshCounts('resumes');
+  refreshCounts('jobs');
   $('results').hidden = true;
   $('download').disabled = true;
   $('bar').style.width = '0';
@@ -165,7 +228,7 @@ async function start() {
     setStatus('Checking the server…');
     await client.listModels(state.controller.signal);
 
-    const { jobs, resumes } = state;
+    const jobs = merged('jobs'), resumes = merged('resumes');
     log(`Matching ${jobs.length} job(s) against ${resumes.length} resume(s) using ${state.settings.model}`);
     setStatus('Working…');
 
@@ -205,7 +268,7 @@ function busy(on) {
   $('clear-files').disabled = on;
 }
 
-const ready = () => state.resumes.length > 0 && state.jobs.length > 0;
+const ready = () => merged('resumes').length > 0 && merged('jobs').length > 0;
 
 function refresh() {
   $('run').disabled = !ready() || state.controller !== null;
@@ -312,7 +375,7 @@ function refreshSummary() {
   $('summary').textContent =
     `Using ${s.model || '(no model set)'} @ ${where}` +
     (remote ? ' — resume text leaves this network' : '') +
-    ` · ${state.resumes.length} resume(s), ${state.jobs.length} job(s)`;
+    ` · ${merged('resumes').length} resume(s), ${merged('jobs').length} job(s)`;
 
   $('privacy').hidden = !remote;
   $('privacy').textContent = remote

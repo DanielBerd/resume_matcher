@@ -1,0 +1,17 @@
+{
+  "note": "Bundled sample data. The web root is served on its own, so these are a copy of app/examples/ rather than a link to it.",
+  "resumes": [
+    "anna_kovacs_senior_python_engineer.pdf",
+    "david_okafor_fullstack_developer.docx",
+    "emma_berg_marketing_manager.pdf",
+    "marcus_chen_ml_engineer.pdf",
+    "sofia_lindqvist_frontend_developer.docx"
+  ],
+  "jobs": [
+    "data_engineer.txt",
+    "embedded_cpp_engineer.txt",
+    "frontend_react_developer.txt",
+    "ml_engineer.eml",
+    "senior_python_developer.txt"
+  ]
+}

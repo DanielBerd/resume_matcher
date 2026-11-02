@@ -1,0 +1,20 @@
+Frontend Developer (React) — Brightcart
+
+Brightcart, an e-commerce startup, is looking for a Frontend Developer to own
+our customer-facing storefront.
+
+What you'll do:
+- Build and maintain our React + TypeScript storefront
+- Work closely with design to ship polished, accessible UI
+- Improve performance (Core Web Vitals) and test coverage
+
+Requirements:
+- 2+ years of professional React experience
+- Strong TypeScript, HTML, and CSS fundamentals
+- Experience with state management (Redux, Zustand, or similar)
+- Familiarity with testing tools (Jest, React Testing Library, Playwright)
+
+Nice to have:
+- Next.js and server-side rendering experience
+- Design system experience (Storybook)
+- Node.js backend exposure
