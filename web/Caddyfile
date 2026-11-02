@@ -1,0 +1,34 @@
+# One origin for the browser: the page and the model API.
+#
+# This is what makes CORS a non-issue. The browser only ever sees this host,
+# so every request the page makes is same-origin, no matter that vLLM is a
+# separate app in a separate container.
+#
+# Set VLLM_UPSTREAM to where vLLM actually listens. From inside a container
+# that is NOT localhost — use the TrueNAS host's LAN address, e.g.
+# 192.168.1.10:8000, or the service name if both are in one compose file.
+
+{
+	# No public certificates on a LAN-only host.
+	auto_https off
+}
+
+:8080 {
+	encode gzip
+
+	# The OpenAI-compatible API, proxied to vLLM.
+	handle /v1/* {
+		reverse_proxy {$VLLM_UPSTREAM:host.docker.internal:8000}
+	}
+
+	# Everything else is the static app.
+	handle {
+		root * /srv
+		file_server
+	}
+
+	log {
+		output stderr
+		format console
+	}
+}

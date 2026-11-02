@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resume Matcher</title>
+<link rel="stylesheet" href="css/app.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
+</head>
+<body>
+
+<header>
+  <h1>Resume Matcher</h1>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true"  data-tab="match">Match</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="server">Server</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ===================== Match ===================== -->
+  <section id="tab-match" class="panel" role="tabpanel">
+    <p id="summary" class="summary"></p>
+
+    <div class="pickers">
+      <div class="picker">
+        <h2>Resumes</h2>
+        <div id="resume-zone" class="zone" tabindex="0" role="button">
+          <strong>Drop your resumes here</strong>
+          <span class="hint">or click to choose a folder · .pdf .docx .txt</span>
+        </div>
+        <p class="muted"><span id="resume-status">No resumes loaded.</span>
+          <button id="pick-resume-files" class="linkish" type="button">pick individual files instead</button>
+        </p>
+      </div>
+
+      <div class="picker">
+        <h2>Job postings</h2>
+        <div id="job-zone" class="zone" tabindex="0" role="button">
+          <strong>Drop job postings here</strong>
+          <span class="hint">or click to choose files · .txt .eml .pdf .docx</span>
+        </div>
+        <p class="muted"><span id="job-status">No job postings loaded.</span></p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="run" class="primary" disabled>Run match</button>
+      <button id="stop" disabled>Stop</button>
+      <button id="download" disabled>Download report</button>
+      <button id="clear-files" class="ghost">Clear files</button>
+    </div>
+
+    <div class="progress"><div id="bar"></div></div>
+    <p id="status" class="muted">Ready.</p>
+
+    <div id="results" class="results" hidden></div>
+
+    <details class="log-wrap">
+      <summary>Log</summary>
+      <pre id="log" class="log"></pre>
+    </details>
+  </section>
+
+  <!-- ===================== Server ===================== -->
+  <section id="tab-server" class="panel" role="tabpanel" hidden>
+    <div class="card">
+      <div class="field">
+        <label for="preset">Preset</label>
+        <select id="preset"></select>
+      </div>
+
+      <div class="field">
+        <label for="base-url">Base URL</label>
+        <input id="base-url" type="text" spellcheck="false" placeholder="/v1">
+      </div>
+      <p class="muted field-note">
+        A relative URL such as <code>/v1</code> keeps the model server on this
+        same origin behind your reverse proxy — no CORS involved.
+      </p>
+
+      <div class="field">
+        <label for="api-key">API key</label>
+        <input id="api-key" type="password" spellcheck="false" autocomplete="off">
+        <button id="toggle-key" class="ghost small" type="button">Show</button>
+      </div>
+
+      <div class="field">
+        <label for="model">Model</label>
+        <input id="model" type="text" list="model-list" spellcheck="false" placeholder="served model name">
+        <datalist id="model-list"></datalist>
+        <button id="fetch-models" class="ghost small" type="button">Fetch</button>
+      </div>
+
+      <div class="field">
+        <label for="concurrency">Concurrency</label>
+        <input id="concurrency" type="number" min="1" max="32" step="1">
+        <span class="muted">in flight at once</span>
+      </div>
+
+      <div class="field">
+        <label for="top-n">Top N</label>
+        <input id="top-n" type="number" min="1" max="50" step="1">
+        <span class="muted">resumes reported per job</span>
+      </div>
+
+      <p id="privacy" class="warn" hidden></p>
+
+      <div class="actions">
+        <button id="test" class="primary">Test connection</button>
+        <button id="save">Save</button>
+      </div>
+
+      <p id="server-status" class="muted"></p>
+    </div>
+  </section>
+</main>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

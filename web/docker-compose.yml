@@ -1,0 +1,28 @@
+# Serves the app and proxies the model API from one origin.
+#
+# On TrueNAS SCALE: Apps > Discover Apps > Custom App > install via YAML.
+# vLLM stays its OWN app — it is not part of this file. Point VLLM_UPSTREAM at
+# wherever it listens; from inside this container that is the TrueNAS host's
+# LAN address, not localhost.
+#
+#   VLLM_UPSTREAM=192.168.1.10:8000 docker compose up -d
+#
+# Then open http://<truenas>:8080 and leave Base URL as /v1.
+
+services:
+  resume-matcher:
+    image: caddy:2-alpine
+    container_name: resume-matcher
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Where vLLM listens. Override per host.
+      VLLM_UPSTREAM: "${VLLM_UPSTREAM:-host.docker.internal:8000}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # The site itself: index.html, css/, js/, vendor/.
+      - ./:/srv:ro
+    extra_hosts:
+      # Lets host.docker.internal work as a default on plain Docker hosts.
+      - "host.docker.internal:host-gateway"
